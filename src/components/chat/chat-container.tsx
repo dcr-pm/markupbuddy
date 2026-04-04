@@ -102,7 +102,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Preview panel — hidden on mobile, shown on lg+ */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} />
+        <PreviewPanel html={currentHtml} isStreaming={isStreaming} />
       </div>
     </div>
   );
