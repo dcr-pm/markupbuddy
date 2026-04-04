@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useEffect } from "react";
-import { sanitizeHtmlForPreview } from "@/lib/email/sanitize";
 import { cn } from "@/lib/utils";
 
 interface PreviewFrameProps {
@@ -13,17 +12,16 @@ interface PreviewFrameProps {
 export function PreviewFrame({ html, width, darkMode }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const sanitizedHtml = useMemo(() => sanitizeHtmlForPreview(html), [html]);
-
+  // The iframe sandbox="allow-same-origin" (no allow-scripts) is the security
+  // boundary — it blocks all JS execution. No need for DOMPurify which was
+  // breaking email HTML by stripping valid email attributes and tags.
   const wrappedHtml = useMemo(() => {
-    const base = sanitizedHtml || html;
     if (darkMode) {
-      return `<div style="background-color: #1a1a1a; min-height: 100%; padding: 0;">${base}</div>`;
+      return `<div style="background-color: #1a1a1a; min-height: 100%; padding: 0;">${html}</div>`;
     }
-    return base;
-  }, [sanitizedHtml, html, darkMode]);
+    return html;
+  }, [html, darkMode]);
 
-  // Write to iframe document directly for better compatibility
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
@@ -48,7 +46,6 @@ export function PreviewFrame({ html, width, darkMode }: PreviewFrameProps) {
         }, 200);
       }
     } catch {
-      // Fallback: use srcdoc
       iframe.srcdoc = wrappedHtml;
     }
   }, [wrappedHtml]);
