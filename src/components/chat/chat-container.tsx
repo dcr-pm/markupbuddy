@@ -89,6 +89,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           onImageSelected={(prompt, url) => {
             sendMessage(`Use this image for "${prompt}": ${url}`);
           }}
+          onSuggestionClick={(text) => sendMessage(text)}
         />
 
         <ChatInput

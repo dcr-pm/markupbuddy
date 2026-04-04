@@ -8,9 +8,10 @@ interface MessageListProps {
   messages: Message[];
   isStreaming: boolean;
   onImageSelected?: (prompt: string, url: string) => void;
+  onSuggestionClick?: (text: string) => void;
 }
 
-export function MessageList({ messages, isStreaming, onImageSelected }: MessageListProps) {
+export function MessageList({ messages, isStreaming, onImageSelected, onSuggestionClick }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export function MessageList({ messages, isStreaming, onImageSelected }: MessageL
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
+                onClick={() => onSuggestionClick?.(s)}
                 className="p-3 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-accent transition text-left"
               >
                 {s}
