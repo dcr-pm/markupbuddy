@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/darre/OneDrive/Desktop/**)",
+      "Bash(npx create-next-app@latest markupbuddy --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(mv markupbuddy/PRODUCT_SPEC.md /tmp/PRODUCT_SPEC.md)"
+    ]
+  }
+}
