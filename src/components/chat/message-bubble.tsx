@@ -3,14 +3,17 @@
 import { cn, formatDate } from "@/lib/utils";
 import type { Message } from "@/types/chat";
 import { User, Bot } from "lucide-react";
+import { ImageOptions } from "./image-options";
 
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
+  onImageSelected?: (prompt: string, url: string) => void;
 }
 
-export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming, onImageSelected }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const { text, imagePrompts } = parseContent(message.content, isUser);
 
   return (
     <div
@@ -46,7 +49,7 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
             </div>
           )}
           <div className="whitespace-pre-wrap break-words">
-            {stripHtmlBlocks(message.content)}
+            {text}
           </div>
           {isStreaming && !message.content && (
             <span className="inline-flex gap-1">
@@ -56,6 +59,18 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
             </span>
           )}
         </div>
+
+        {imagePrompts.length > 0 && !isStreaming && (
+          <div className="w-full">
+            {imagePrompts.map((prompt, i) => (
+              <ImageOptions
+                key={`${message.id}-img-${i}`}
+                prompt={prompt}
+                onSelect={(url) => onImageSelected?.(prompt, url)}
+              />
+            ))}
+          </div>
+        )}
 
         <span className="text-xs text-muted-foreground">
           {formatDate(message.created_at)}
@@ -71,10 +86,22 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   );
 }
 
-function stripHtmlBlocks(content: string): string {
-  // Remove ```html...``` code blocks (closed or unclosed) from the displayed text
-  return content
+function parseContent(content: string, isUser: boolean): { text: string; imagePrompts: string[] } {
+  if (isUser) return { text: content, imagePrompts: [] };
+
+  const imagePrompts: string[] = [];
+  const imageTagRegex = /\[GENERATE_IMAGE:\s*([^\]]+)\]/g;
+  let match;
+  while ((match = imageTagRegex.exec(content)) !== null) {
+    imagePrompts.push(match[1].trim());
+  }
+
+  // Strip HTML blocks and image tags from displayed text
+  const text = content
     .replace(/```html[\s\S]*?```/g, "")
     .replace(/```html[\s\S]*/g, "")
+    .replace(imageTagRegex, "")
     .trim();
+
+  return { text, imagePrompts };
 }

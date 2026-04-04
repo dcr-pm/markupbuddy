@@ -83,7 +83,13 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           />
         </div>
 
-        <MessageList messages={messages} isStreaming={isStreaming} />
+        <MessageList
+          messages={messages}
+          isStreaming={isStreaming}
+          onImageSelected={(prompt, url) => {
+            sendMessage(`Use this image for "${prompt}": ${url}`);
+          }}
+        />
 
         <ChatInput
           onSend={sendMessage}

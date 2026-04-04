@@ -7,9 +7,10 @@ import { MessageBubble } from "./message-bubble";
 interface MessageListProps {
   messages: Message[];
   isStreaming: boolean;
+  onImageSelected?: (prompt: string, url: string) => void;
 }
 
-export function MessageList({ messages, isStreaming }: MessageListProps) {
+export function MessageList({ messages, isStreaming, onImageSelected }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
               i === messages.length - 1 &&
               msg.role === "assistant"
             }
+            onImageSelected={onImageSelected}
           />
         ))}
         <div ref={bottomRef} />
