@@ -40,7 +40,7 @@ export function PreviewFrame({ html, width, darkMode }: PreviewFrameProps) {
           try {
             const height = iframe.contentDocument?.documentElement?.scrollHeight;
             if (height) {
-              iframe.style.height = `${Math.min(height + 20, 800)}px`;
+              iframe.style.height = `${height + 20}px`;
             }
           } catch {
             // Cross-origin issues — keep default height
