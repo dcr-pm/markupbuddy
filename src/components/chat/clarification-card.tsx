@@ -148,6 +148,43 @@ export function ClarificationCard({
 }
 
 /**
+ * Extract options from question text.
+ * Handles: (opt1, opt2, opt3?), "X, Y, or Z?", "X or Y?"
+ */
+function extractOptions(text: string): string[] {
+  // Try parenthesized options first: (opt1, opt2, opt3?)
+  const parensMatch = text.match(/\(([^)]+)\)/);
+  if (parensMatch) {
+    const opts = parensMatch[1]
+      .split(/[,?]/)
+      .map((o) => o.replace(/\bor\b/gi, "").trim())
+      .filter((o) => o.length > 0 && o.length < 50);
+    if (opts.length >= 2) return opts;
+  }
+
+  // Try "or"-separated: "X, or Y?" or "X or Y?"
+  const cleaned = text.replace(/\?+$/, "").trim();
+  const orParts = cleaned.split(/,?\s+or\s+/i);
+  if (orParts.length >= 2) {
+    const opts = orParts
+      .map((o) => o.replace(/^.*?[—–\-:]\s*/, "").trim())
+      .filter((o) => o.length > 0 && o.length < 50);
+    if (opts.length >= 2) return opts;
+  }
+
+  // Try comma-separated list: "X, Y, Z"
+  const commaParts = cleaned.split(/,\s*/);
+  if (commaParts.length >= 3) {
+    const opts = commaParts
+      .map((o) => o.replace(/\bor\b/gi, "").trim())
+      .filter((o) => o.length > 0 && o.length < 50);
+    if (opts.length >= 2) return opts;
+  }
+
+  return [];
+}
+
+/**
  * Detect if an assistant message is a clarification response and parse it.
  * Returns null if it's not a clarification.
  */
@@ -156,55 +193,53 @@ export function parseClarification(content: string): {
   questions: ClarificationQuestion[];
   outro: string;
 } | null {
-  // Must have numbered questions (at least 2)
-  const questionPattern = /\d+\.\s+\*\*(\w[\w\s]*?)\*\*\s*[—–-]\s*(.+)/g;
   const questions: ClarificationQuestion[] = [];
-  let match;
 
-  while ((match = questionPattern.exec(content)) !== null) {
-    const label = match[1].trim();
-    const rest = match[2].trim();
+  // Pattern 1: **Bold** — rest (Gemini style)
+  // Pattern 2: **Bold**: rest
+  // Pattern 3: Bold — rest (no markdown)
+  // Pattern 4: Bold: rest (plain text)
+  const patterns = [
+    /\d+\.\s+\*\*(\w[\w\s/]*?)\*\*\s*[—–\-:]\s*(.+)/g,
+    /\d+\.\s+(\w[\w\s/]*?)\s*[—–]\s*(.+)/g,
+    /\d+\.\s+(\w[\w\s/]*?):\s*(.+)/g,
+  ];
 
-    // Extract options from parentheses first
-    const optionsMatch = rest.match(/\(([^)]+)\)/);
-    let options: string[] = [];
-    if (optionsMatch) {
-      options = optionsMatch[1]
-        .split(/[,?]/)
-        .map((o) => o.replace(/\bor\b/gi, "").trim())
-        .filter((o) => o.length > 0 && o.length < 50);
-    }
+  for (const pattern of patterns) {
+    let match;
+    const found: ClarificationQuestion[] = [];
 
-    // Fallback: parse "X, or Y?" or "X or Y?" patterns without parens
-    if (options.length < 2) {
-      // Look for "or" separated options after the dash
-      const questionText = rest.replace(/\?+$/, "").trim();
-      // Match patterns like "Formal and corporate, or friendly and casual"
-      const orParts = questionText.split(/,?\s+or\s+/i);
-      if (orParts.length >= 2) {
-        options = orParts
-          .map((o) => o.replace(/^.*?[—–-]\s*/, "").trim())
-          .filter((o) => o.length > 0 && o.length < 50);
+    while ((match = pattern.exec(content)) !== null) {
+      const label = match[1].trim();
+      const rest = match[2].trim();
+
+      // Skip if label is too long (probably not a question label)
+      if (label.length > 30) continue;
+
+      const options = extractOptions(rest);
+      if (options.length >= 2) {
+        found.push({ label, options });
       }
     }
 
-    if (options.length >= 2) {
-      questions.push({ label, options });
+    if (found.length >= 2) {
+      questions.push(...found);
+      break;
     }
   }
 
   if (questions.length < 2) return null;
 
   // Extract intro (text before first question)
-  const firstQuestionIndex = content.search(/\d+\.\s+\*\*/);
+  const firstQuestionIndex = content.search(/\d+\.\s+(?:\*\*)?[\w]/);
   const intro = firstQuestionIndex > 0
     ? content.slice(0, firstQuestionIndex).replace(/[*#>]/g, "").trim()
     : "";
 
   // Extract outro (text after last question)
-  const lastQuestionEnd = content.lastIndexOf("?)");
-  const outro = lastQuestionEnd > 0
-    ? content.slice(lastQuestionEnd + 2).replace(/[*#>]/g, "").replace(/or just say.*$/i, "").trim()
+  const lastQuestionMark = content.lastIndexOf("?");
+  const outro = lastQuestionMark > 0
+    ? content.slice(lastQuestionMark + 1).replace(/[*#>)\]]/g, "").replace(/or just say.*$/i, "").replace(/just say.*$/i, "").trim()
     : "";
 
   return { intro, questions, outro };
