@@ -35,7 +35,7 @@ export async function createDeepSeekStream({
       { role: "system", content: systemPrompt },
       ...messages,
     ],
-    max_tokens: 65536,
+    max_tokens: 8192,
     stream: true,
   });
 
