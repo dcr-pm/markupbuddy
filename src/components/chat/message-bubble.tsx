@@ -59,9 +59,7 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
               onSubmit={(answers) => onSendReply?.(answers)}
             />
           ) : (
-            <div className="whitespace-pre-wrap break-words">
-              {text}
-            </div>
+            <div className="whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
           )}
           {isStreaming && !message.content && (
             <span className="inline-flex gap-1">
@@ -96,6 +94,25 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
       )}
     </div>
   );
+}
+
+/**
+ * Render basic markdown: bold, italic, inline code, and sanitize HTML.
+ */
+function renderMarkdown(text: string): string {
+  return text
+    // Escape HTML to prevent injection
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    // Bold: **text** or __text__
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<strong>$1</strong>")
+    // Italic: *text* or _text_
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/(?<!\w)_(.+?)_(?!\w)/g, "<em>$1</em>")
+    // Inline code: `text`
+    .replace(/`([^`]+)`/g, '<code class="bg-background/50 px-1 py-0.5 rounded text-xs">$1</code>');
 }
 
 function parseContent(content: string, isUser: boolean): { text: string; imagePrompts: string[] } {
