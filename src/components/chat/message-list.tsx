@@ -68,7 +68,7 @@ export function MessageList({ messages, isStreaming, onImageSelected, onSuggesti
 
 const SUGGESTIONS = [
   "Give me a welcome email template",
-  "Build a 20% off sale email with a hero image",
-  "Create an abandoned cart email with product recommendations",
+  "I need an email for my product launch",
+  "Help me build a promotional campaign",
   "Design a newsletter template with 3 article sections",
 ];
