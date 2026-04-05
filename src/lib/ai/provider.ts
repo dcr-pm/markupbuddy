@@ -109,6 +109,72 @@ function isRateLimitError(error: unknown): boolean {
   return false;
 }
 
+/**
+ * Wraps a provider stream with error detection on the first chunk.
+ * If the first chunk contains an error, throws so fallback can trigger.
+ */
+function createVerifiedStream(
+  innerStream: ReadableStream<Uint8Array>
+): Promise<ReadableStream<Uint8Array>> {
+  return new Promise((resolve, reject) => {
+    const reader = innerStream.getReader();
+    const decoder = new TextDecoder();
+
+    reader.read().then(({ done, value }) => {
+      if (done) {
+        // Empty stream — something wrong
+        reject(new Error("Empty response from provider"));
+        return;
+      }
+
+      const firstChunk = decoder.decode(value, { stream: true });
+
+      // Check if first chunk contains an error
+      for (const line of firstChunk.split("\n")) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.error) {
+            reject(new Error(data.error));
+            return;
+          }
+        } catch {
+          // Not valid JSON, continue
+        }
+      }
+
+      // First chunk is good — create a new stream that replays it
+      const encoder = new TextEncoder();
+      resolve(
+        new ReadableStream({
+          start(controller) {
+            // Replay first chunk
+            controller.enqueue(value);
+            // Pipe the rest
+            (async () => {
+              try {
+                while (true) {
+                  const { done: d, value: v } = await reader.read();
+                  if (d) break;
+                  controller.enqueue(v);
+                }
+                controller.close();
+              } catch (err) {
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ error: err instanceof Error ? err.message : "Stream error" })}\n\n`
+                  )
+                );
+                controller.close();
+              }
+            })();
+          },
+        })
+      );
+    }).catch(reject);
+  });
+}
+
 export async function createAIStream(
   request: StreamRequest
 ): Promise<ReadableStream<Uint8Array>> {
@@ -121,24 +187,24 @@ export async function createAIStream(
     ...allProviders.filter((p) => p !== primary),
   ];
 
+  console.log(`[ai] Available providers: ${allProviders.join(", ")}`);
+  console.log(`[ai] Fallback order: ${fallbackOrder.join(" → ")}`);
+
   let lastError: unknown;
 
   for (const provider of fallbackOrder) {
     try {
       console.log(`[ai] Trying provider: ${provider}`);
-      const stream = await createStreamForProvider(provider, request);
+      const rawStream = await createStreamForProvider(provider, request);
+      // Verify first chunk succeeds before committing to this provider
+      const verifiedStream = await createVerifiedStream(rawStream);
       console.log(`[ai] Using provider: ${provider}`);
-      return stream;
+      return verifiedStream;
     } catch (error) {
       lastError = error;
       console.warn(
         `[ai] Provider ${provider} failed: ${error instanceof Error ? error.message : "Unknown error"}`
       );
-      if (!isRateLimitError(error)) {
-        // Non-rate-limit errors might be transient, still try fallback
-        continue;
-      }
-      // Rate limit — definitely try next provider
       continue;
     }
   }
