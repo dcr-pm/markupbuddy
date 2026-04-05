@@ -58,6 +58,7 @@ export function MessageList({ messages, isStreaming, onImageSelected, onSuggesti
               msg.role === "assistant"
             }
             onImageSelected={onImageSelected}
+            onSendReply={onSuggestionClick}
           />
         ))}
         <div ref={bottomRef} />

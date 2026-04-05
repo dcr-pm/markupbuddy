@@ -4,16 +4,19 @@ import { cn, formatDate } from "@/lib/utils";
 import type { Message } from "@/types/chat";
 import { User, Bot } from "lucide-react";
 import { ImageOptions } from "./image-options";
+import { ClarificationCard, parseClarification } from "./clarification-card";
 
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
   onImageSelected?: (prompt: string, url: string) => void;
+  onSendReply?: (text: string) => void;
 }
 
-export function MessageBubble({ message, isStreaming, onImageSelected }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming, onImageSelected, onSendReply }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const { text, imagePrompts } = parseContent(message.content, isUser);
+  const clarification = !isUser && !isStreaming ? parseClarification(message.content) : null;
 
   return (
     <div
@@ -48,9 +51,18 @@ export function MessageBubble({ message, isStreaming, onImageSelected }: Message
               />
             </div>
           )}
-          <div className="whitespace-pre-wrap break-words">
-            {text}
-          </div>
+          {clarification ? (
+            <ClarificationCard
+              intro={clarification.intro}
+              questions={clarification.questions}
+              outro={clarification.outro}
+              onSubmit={(answers) => onSendReply?.(answers)}
+            />
+          ) : (
+            <div className="whitespace-pre-wrap break-words">
+              {text}
+            </div>
+          )}
           {isStreaming && !message.content && (
             <span className="inline-flex gap-1">
               <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" />
