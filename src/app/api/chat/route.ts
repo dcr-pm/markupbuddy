@@ -61,10 +61,19 @@ export async function POST(request: Request) {
       .limit(50);
 
     // Build unified message format
+    // For older messages, strip HTML blocks to save context space
+    // but keep the last assistant HTML so the AI can edit it
     const chatMessages: { role: "user" | "assistant"; content: string; imageUrl?: string }[] = [];
 
     if (history) {
-      for (const msg of history) {
+      // Find the last assistant message with HTML
+      const lastHtmlIndex = [...history]
+        .map((m, i) => ({ i, hasHtml: m.role === "assistant" && !!m.html_output }))
+        .filter((x) => x.hasHtml)
+        .pop()?.i ?? -1;
+
+      for (let i = 0; i < history.length; i++) {
+        const msg = history[i];
         if (msg.role === "user") {
           chatMessages.push({
             role: "user",
@@ -72,7 +81,16 @@ export async function POST(request: Request) {
             imageUrl: (msg.metadata as Record<string, string>)?.imageUrl || undefined,
           });
         } else if (msg.role === "assistant") {
-          chatMessages.push({ role: "assistant", content: msg.content });
+          if (i === lastHtmlIndex && msg.html_output) {
+            // Keep the latest HTML in full so the AI can edit it
+            chatMessages.push({ role: "assistant", content: msg.content });
+          } else {
+            // Strip HTML blocks from older messages to save context
+            const compressed = msg.content
+              .replace(/```html[\s\S]*?```/g, "[Previous email HTML omitted — see latest version below]")
+              .replace(/```html[\s\S]*/g, "[Previous email HTML omitted]");
+            chatMessages.push({ role: "assistant", content: compressed });
+          }
         }
       }
     }
