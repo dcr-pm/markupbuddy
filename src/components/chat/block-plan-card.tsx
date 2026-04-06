@@ -144,8 +144,10 @@ export function parseBlockPlan(content: string): {
   blocks: BlockPlanBlock[];
   assetPrompt: string;
 } | null {
-  // If the message contains code fences (MJML/HTML), it's a BUILD response, not a plan
-  if (/```(?:mjml|html|xml)/i.test(content)) return null;
+  // If the message contains ANY code fences or raw MJML tags, it's a BUILD response, not a plan
+  if (/```/.test(content)) return null;
+  if (/<mjml[\s>]/i.test(content)) return null;
+  if (/<mj-body[\s>]/i.test(content)) return null;
 
   const blocks: BlockPlanBlock[] = [];
 
