@@ -205,12 +205,17 @@ function parseContent(content: string, isUser: boolean): { text: string; imagePr
     imagePrompts.push(match[1].trim());
   }
 
-  // Strip ALL code blocks, MJML/HTML tags, and image tags from displayed text
+  // Strip ALL code blocks, HTML/MJML markup, and image tags from displayed text
   const text = content
-    .replace(/```[\s\S]*?```/g, "")          // all fenced code blocks (closed)
-    .replace(/```[\s\S]*/g, "")              // unclosed code blocks (truncated)
-    .replace(/<\/?mj[\w-]*[^>]*>/gi, "")     // any stray MJML tags
+    .replace(/```[\s\S]*?```/g, "")              // fenced code blocks (closed)
+    .replace(/```[\s\S]*/g, "")                  // unclosed code blocks (truncated)
+    .replace(/<!--[\s\S]*?-->/g, "")             // HTML comments
+    .replace(/<\/?[a-z][\w-]*(?:\s[^>]*)?\/?>/gi, "")  // ALL HTML/MJML tags
+    .replace(/\{[^{}]*:[^{}]*\}/g, "")           // CSS rule blocks like { color: red; }
+    .replace(/style="[^"]*"/gi, "")              // inline styles
+    .replace(/https?:\/\/placehold\.co\/[^\s)"]*/gi, "") // placeholder image URLs
     .replace(imageTagRegex, "")
+    .replace(/\n{3,}/g, "\n\n")                  // collapse excessive newlines
     .trim();
 
   return { text, imagePrompts };

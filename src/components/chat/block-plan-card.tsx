@@ -169,16 +169,19 @@ export function parseBlockPlan(content: string): {
 
   if (blocks.length < 2) return null;
 
-  // Strip code blocks and MJML/HTML tags from text
+  // Strip all code, markup, and technical content from text
   const stripCode = (text: string) =>
     text
-      .replace(/```[\s\S]*?```/g, "")       // fenced code blocks
-      .replace(/```[\s\S]*/g, "")            // unclosed code blocks
-      .replace(/<\/?mj[\w-]*[^>]*>/gi, "")   // MJML tags
-      .replace(/<\/?[a-z][\w-]*[^>]*>/gi, "") // HTML tags
-      .replace(/\{[^}]*\}/g, "")              // CSS rules
+      .replace(/```[\s\S]*?```/g, "")               // fenced code blocks
+      .replace(/```[\s\S]*/g, "")                    // unclosed code blocks
+      .replace(/<!--[\s\S]*?-->/g, "")               // HTML comments
+      .replace(/<\/?[a-z][\w-]*(?:\s[^>]*)?\/?>/gi, "")  // ALL HTML/MJML tags
+      .replace(/\{[^{}]*:[^{}]*\}/g, "")             // CSS rule blocks
+      .replace(/style="[^"]*"/gi, "")                // inline styles
+      .replace(/https?:\/\/\S+/gi, "")               // URLs
       .replace(/\*\*/g, "")
       .replace(/[#>]/g, "")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
 
   // Extract intro text (before "Block 1")
