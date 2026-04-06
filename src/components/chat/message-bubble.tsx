@@ -28,14 +28,14 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
       className={cn("flex gap-3 px-4 py-4", isUser ? "justify-end" : "")}
     >
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-          <Bot className="w-4 h-4 text-primary" />
+        <div className="flex-shrink-0 w-8 h-8 rounded-full gradient-bg opacity-90 flex items-center justify-center shadow-sm">
+          <Bot className="w-4 h-4 text-white" />
         </div>
       )}
 
       <div
         className={cn(
-          "flex flex-col gap-2 max-w-[85%]",
+          "flex flex-col gap-1.5 max-w-[85%]",
           isUser ? "items-end" : "items-start"
         )}
       >
@@ -43,8 +43,8 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
           className={cn(
             "rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
             isUser
-              ? "bg-primary text-primary-foreground rounded-br-md"
-              : "bg-muted text-foreground rounded-bl-md"
+              ? "gradient-bg text-white rounded-br-md shadow-sm"
+              : "bg-background text-foreground rounded-bl-md border border-border shadow-sm"
           )}
         >
           {message.metadata?.imageUrl && (
@@ -102,8 +102,8 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
       </div>
 
       {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-          <User className="w-4 h-4 text-primary-foreground" />
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center">
+          <User className="w-4 h-4 text-foreground/60" />
         </div>
       )}
     </div>

@@ -82,7 +82,6 @@ export function ChatInput({
         setText("");
       }
 
-      // Reset file input
       if (fileInputRef.current) fileInputRef.current.value = "";
     },
     [onImageUpload, onSend, text]
@@ -92,7 +91,6 @@ export function ChatInput({
     (e: React.ClipboardEvent) => {
       const pastedText = e.clipboardData.getData("text");
 
-      // Detect HTML paste
       if (
         pastedText.includes("<!DOCTYPE") ||
         pastedText.includes("<html") ||
@@ -110,7 +108,6 @@ export function ChatInput({
         }
       }
 
-      // Detect URL paste
       try {
         const url = new URL(pastedText.trim());
         if (url.protocol === "http:" || url.protocol === "https:") {
@@ -122,37 +119,37 @@ export function ChatInput({
           }
         }
       } catch {
-        // Not a URL, let it paste normally
+        // Not a URL
       }
     },
     [onSend]
   );
 
   return (
-    <div className="border-t border-border bg-background px-4 py-3">
-      <div className="max-w-3xl mx-auto flex items-end gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/gif,image/webp"
-          onChange={handleFileChange}
-          className="hidden"
-        />
+    <div className="border-t border-border bg-background p-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-end gap-2 p-2 rounded-2xl border border-border bg-surface shadow-sm focus-within:border-primary/30 focus-within:shadow-md focus-within:shadow-primary/5 transition-all">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isStreaming || uploading}
-          className="flex-shrink-0 p-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition disabled:opacity-50"
-          title="Upload image"
-        >
-          {uploading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Paperclip className="w-5 h-5" />
-          )}
-        </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isStreaming || uploading}
+            className="flex-shrink-0 p-2 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/5 transition disabled:opacity-50"
+            title="Upload image"
+          >
+            {uploading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Paperclip className="w-5 h-5" />
+            )}
+          </button>
 
-        <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
             value={text}
@@ -165,31 +162,36 @@ export function ChatInput({
             placeholder="Describe your email or paste a screenshot..."
             rows={1}
             className={cn(
-              "w-full resize-none rounded-xl border border-border bg-muted px-4 py-3 pr-12 text-sm",
-              "placeholder-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20",
-              "outline-none transition max-h-[200px] scrollbar-thin"
+              "flex-1 resize-none bg-transparent px-2 py-2 text-sm",
+              "placeholder-muted-foreground outline-none",
+              "max-h-[200px] scrollbar-thin"
             )}
           />
-        </div>
 
-        {isStreaming ? (
-          <button
-            onClick={onStop}
-            className="flex-shrink-0 p-2.5 rounded-lg bg-destructive text-white hover:bg-destructive/90 transition"
-            title="Stop generating"
-          >
-            <Square className="w-5 h-5" />
-          </button>
-        ) : (
-          <button
-            onClick={handleSubmit}
-            disabled={!text.trim()}
-            className="flex-shrink-0 p-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Send message"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        )}
+          {isStreaming ? (
+            <button
+              onClick={onStop}
+              className="flex-shrink-0 p-2 rounded-xl bg-destructive text-white hover:bg-destructive/90 transition"
+              title="Stop generating"
+            >
+              <Square className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!text.trim()}
+              className={cn(
+                "flex-shrink-0 p-2 rounded-xl transition",
+                text.trim()
+                  ? "gradient-bg text-white shadow-sm hover:opacity-90"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+              title="Send message"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Message } from "@/types/chat";
 import { MessageBubble } from "./message-bubble";
+import { Mail, Megaphone, Tag, Newspaper, RefreshCw, ShoppingCart } from "lucide-react";
 
 interface MessageListProps {
   messages: Message[];
@@ -21,22 +22,27 @@ export function MessageList({ messages, isStreaming, onImageSelected, onSuggesti
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <h2 className="text-2xl font-semibold text-foreground mb-2">
+        <div className="text-center max-w-lg">
+          <div className="w-14 h-14 mx-auto mb-6 rounded-2xl gradient-bg flex items-center justify-center shadow-lg shadow-primary/20">
+            <Mail className="w-7 h-7 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-2">
             What email can I build for you?
           </h2>
-          <p className="text-muted-foreground text-sm mb-6">
-            Describe it, paste a screenshot, upload an image, or ask for a
-            template.
+          <p className="text-muted-foreground text-sm mb-8">
+            Describe it, paste a screenshot, upload an image, or pick a starting point below.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
             {SUGGESTIONS.map((s) => (
               <button
-                key={s}
-                onClick={() => onSuggestionClick?.(s)}
-                className="p-3 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-accent transition text-left"
+                key={s.text}
+                onClick={() => onSuggestionClick?.(s.text)}
+                className="group flex items-start gap-3 p-4 rounded-xl border border-border bg-background text-sm text-muted-foreground hover:text-foreground hover:border-primary/20 hover:shadow-md hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-200"
               >
-                {s}
+                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-accent flex items-center justify-center group-hover:gradient-bg group-hover:text-white transition-all">
+                  <s.icon className="w-4 h-4" />
+                </div>
+                <span className="pt-1">{s.text}</span>
               </button>
             ))}
           </div>
@@ -68,8 +74,10 @@ export function MessageList({ messages, isStreaming, onImageSelected, onSuggesti
 }
 
 const SUGGESTIONS = [
-  "I need a welcome email for new subscribers",
-  "Help me design a product launch announcement",
-  "I want to build a promotional sale email",
-  "Create a newsletter with multiple article sections",
+  { text: "I need a welcome email for new subscribers", icon: Mail },
+  { text: "Help me design a product launch announcement", icon: Megaphone },
+  { text: "I want to build a promotional sale email", icon: Tag },
+  { text: "Create a newsletter with multiple article sections", icon: Newspaper },
+  { text: "Design a re-engagement win-back email", icon: RefreshCw },
+  { text: "Build an abandoned cart recovery email", icon: ShoppingCart },
 ];

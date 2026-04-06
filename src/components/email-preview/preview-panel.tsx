@@ -59,7 +59,6 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
   const preview = usePreview();
   const [tipIndex, setTipIndex] = useState(0);
 
-  // Rotate tips while streaming
   useEffect(() => {
     if (!isStreaming) return;
     setTipIndex(Math.floor(Math.random() * EMAIL_TIPS.length));
@@ -69,28 +68,37 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
     return () => clearInterval(interval);
   }, [isStreaming]);
 
-  // Show waiting room only while streaming AND no HTML yet
+  // Streaming state with tips
   if (isStreaming && !html) {
     const tip = EMAIL_TIPS[tipIndex];
     return (
-      <div className="flex-1 flex items-center justify-center bg-muted/30 p-8">
+      <div className="flex-1 flex items-center justify-center bg-surface p-8">
         <div className="text-center max-w-sm">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <Mail className="w-8 h-8 text-primary animate-pulse" />
+          {/* Animated email icon */}
+          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl gradient-bg flex items-center justify-center shadow-lg shadow-primary/20 animate-float">
+            <Mail className="w-8 h-8 text-white" />
           </div>
-          <p className="text-sm font-medium text-foreground mb-2">
+
+          <p className="text-sm font-semibold text-foreground mb-1">
             Building your email...
           </p>
-          <div className="flex items-center justify-center gap-1.5 mb-6">
-            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
-            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.15s]" />
-            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.3s]" />
+          <p className="text-xs text-muted-foreground mb-6">
+            This usually takes a few seconds
+          </p>
+
+          {/* Progress shimmer bar */}
+          <div className="w-48 h-1 mx-auto rounded-full bg-border overflow-hidden mb-6">
+            <div className="h-full w-1/2 gradient-bg rounded-full animate-shimmer" />
           </div>
-          <div className="bg-muted/50 rounded-xl p-4 border border-border transition-all duration-500">
+
+          {/* Tip card */}
+          <div className="bg-background rounded-xl p-4 border border-border shadow-sm transition-all duration-500">
             <div className="flex items-start gap-2.5 text-left">
-              <Lightbulb className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+              <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+              </div>
               <div>
-                <p className="text-xs font-medium text-foreground mb-1">{tip.title}</p>
+                <p className="text-xs font-semibold text-foreground mb-1">{tip.title}</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">{tip.tip}</p>
               </div>
             </div>
@@ -100,22 +108,33 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
     );
   }
 
-  // Show empty state when no HTML
+  // Empty state
   if (!html) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-muted/30">
-        <div className="text-center text-muted-foreground">
-          <Mail className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">Email preview</p>
-          <p className="text-xs mt-1">Your email will appear here as it&apos;s built</p>
+      <div className="flex-1 flex items-center justify-center bg-surface">
+        <div className="text-center">
+          {/* Email envelope shape */}
+          <div className="relative w-24 h-16 mx-auto mb-5">
+            <div className="absolute inset-0 rounded-xl border-2 border-dashed border-border" />
+            <div className="absolute inset-x-0 top-0 h-8 overflow-hidden">
+              <div className="w-full h-16 border-2 border-dashed border-border rotate-[3deg] origin-top-left" style={{ clipPath: "polygon(50% 60%, 0 0, 100% 0)" }} />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center pt-2">
+              <Mail className="w-6 h-6 text-muted-foreground/30" />
+            </div>
+          </div>
+          <p className="text-sm font-medium text-foreground">Email Preview</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Your email will appear here as it&apos;s built
+          </p>
         </div>
       </div>
     );
   }
 
-  // Show rendered email
+  // Rendered email
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-muted/30">
+    <div className="flex-1 flex flex-col overflow-hidden bg-surface">
       <PreviewToolbar
         html={html}
         deviceMode={preview.deviceMode}

@@ -144,6 +144,9 @@ export function parseBlockPlan(content: string): {
   blocks: BlockPlanBlock[];
   assetPrompt: string;
 } | null {
+  // If the message contains code fences (MJML/HTML), it's a BUILD response, not a plan
+  if (/```(?:mjml|html|xml)/i.test(content)) return null;
+
   const blocks: BlockPlanBlock[] = [];
 
   // Pattern: "Block N: **Name** — description" or "Block N: Name — description"

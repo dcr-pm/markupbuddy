@@ -44,18 +44,26 @@ export function ConversationSidebar({
     router.refresh();
   };
 
+  const userInitial = (userEmail?.[0] || "U").toUpperCase();
+
   const sidebar = (
-    <div className="flex flex-col h-full w-64 bg-muted border-r border-border">
-      <div className="p-3 flex items-center justify-between border-b border-border">
-        <span className="font-semibold text-sm text-foreground">
-          MarkupBuddy
-        </span>
+    <div className="flex flex-col h-full w-64 bg-gradient-to-b from-muted via-muted to-background border-r border-border">
+      {/* Brand header */}
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center text-white text-xs font-bold shadow-sm">
+            M
+          </div>
+          <span className="font-semibold text-sm text-foreground">
+            Markup<span className="gradient-text">Buddy</span>
+          </span>
+        </div>
         <button
           onClick={handleNew}
-          className="p-1.5 rounded-lg hover:bg-background transition"
-          title="New email"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl gradient-bg text-white text-xs font-medium hover:opacity-90 transition shadow-sm"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
+          New Email
         </button>
       </div>
 
@@ -66,16 +74,16 @@ export function ConversationSidebar({
             <div
               key={conv.id}
               className={cn(
-                "group flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer transition",
+                "group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm cursor-pointer transition-all",
                 isActive
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+                  ? "bg-background text-foreground shadow-sm border border-border"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
               )}
               onClick={() => router.push(`/chat/${conv.id}`)}
             >
-              <MessageSquare className="w-4 h-4 flex-shrink-0" />
-              <span className="flex-1 truncate">
-                {truncate(conv.title, 30)}
+              <MessageSquare className={cn("w-4 h-4 flex-shrink-0", isActive && "text-primary")} />
+              <span className="flex-1 truncate text-xs">
+                {truncate(conv.title, 28)}
               </span>
               <button
                 onClick={(e) => {
@@ -83,9 +91,9 @@ export function ConversationSidebar({
                   deleteConversation(conv.id);
                   if (isActive) router.push("/chat");
                 }}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 hover:text-destructive transition"
+                className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-3 h-3" />
               </button>
             </div>
           );
@@ -96,47 +104,50 @@ export function ConversationSidebar({
         <Link
           href="/brands"
           className={cn(
-            "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition",
+            "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
             pathname === "/brands"
-              ? "bg-background text-foreground"
-              : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+              ? "bg-background text-foreground shadow-sm border border-border"
+              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
           )}
         >
-          <Palette className="w-4 h-4" />
-          Brands
+          <Palette className={cn("w-4 h-4", pathname === "/brands" && "text-purple-500")} />
+          <span className="text-xs">Brands</span>
         </Link>
         <Link
           href="/test-users"
           className={cn(
-            "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition",
+            "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
             pathname === "/test-users"
-              ? "bg-background text-foreground"
-              : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+              ? "bg-background text-foreground shadow-sm border border-border"
+              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
           )}
         >
-          <Users className="w-4 h-4" />
-          Test Users
+          <Users className={cn("w-4 h-4", pathname === "/test-users" && "text-teal-500")} />
+          <span className="text-xs">Test Users</span>
         </Link>
         <Link
           href="/settings"
           className={cn(
-            "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition",
+            "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
             pathname === "/settings"
-              ? "bg-background text-foreground"
-              : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+              ? "bg-background text-foreground shadow-sm border border-border"
+              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
           )}
         >
-          <Settings className="w-4 h-4" />
-          Settings
+          <Settings className={cn("w-4 h-4", pathname === "/settings" && "text-muted-foreground")} />
+          <span className="text-xs">Settings</span>
         </Link>
 
-        <div className="flex items-center justify-between px-3 py-2 mt-2">
-          <span className="text-xs text-muted-foreground truncate">
+        <div className="flex items-center gap-2.5 px-3 py-2.5 mt-1">
+          <div className="w-7 h-7 rounded-full gradient-bg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+            {userInitial}
+          </div>
+          <span className="text-xs text-muted-foreground truncate flex-1">
             {userEmail}
           </span>
           <button
             onClick={handleLogout}
-            className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition"
+            className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition"
             title="Sign out"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -150,7 +161,7 @@ export function ConversationSidebar({
     <>
       {/* Mobile hamburger */}
       <button
-        className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-lg bg-background border border-border shadow-sm"
+        className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-xl bg-background border border-border shadow-lg"
         onClick={() => setOpen(!open)}
       >
         {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -159,7 +170,7 @@ export function ConversationSidebar({
       {/* Mobile overlay */}
       {open && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/50"
+          className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         />
       )}
