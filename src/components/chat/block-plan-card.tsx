@@ -166,15 +166,28 @@ export function parseBlockPlan(content: string): {
 
   if (blocks.length < 2) return null;
 
+  // Strip code blocks and MJML/HTML tags from text
+  const stripCode = (text: string) =>
+    text
+      .replace(/```[\s\S]*?```/g, "")       // fenced code blocks
+      .replace(/```[\s\S]*/g, "")            // unclosed code blocks
+      .replace(/<\/?mj[\w-]*[^>]*>/gi, "")   // MJML tags
+      .replace(/<\/?[a-z][\w-]*[^>]*>/gi, "") // HTML tags
+      .replace(/\{[^}]*\}/g, "")              // CSS rules
+      .replace(/\*\*/g, "")
+      .replace(/[#>]/g, "")
+      .trim();
+
   // Extract intro text (before "Block 1")
   const firstBlockIndex = content.search(/Block\s+1\s*:/i);
-  const intro = firstBlockIndex > 0
-    ? content
+  let intro = "";
+  if (firstBlockIndex > 0) {
+    intro = stripCode(
+      content
         .slice(0, firstBlockIndex)
         .replace(/\*\*Here'?s the build plan:?\*\*/gi, "")
-        .replace(/[*#>]/g, "")
-        .trim()
-    : "";
+    );
+  }
 
   // Extract asset prompt (text after last block, before "build it" / "ready" mention)
   const lastBlockMatch = content.match(/Block\s+\d+:\s+.+/gi);
@@ -182,9 +195,7 @@ export function parseBlockPlan(content: string): {
   if (lastBlockMatch) {
     const lastBlockEnd = content.lastIndexOf(lastBlockMatch[lastBlockMatch.length - 1]);
     const afterBlocks = content.slice(lastBlockEnd + lastBlockMatch[lastBlockMatch.length - 1].length);
-    assetPrompt = afterBlocks
-      .replace(/\*\*/g, "")
-      .replace(/[#>]/g, "")
+    assetPrompt = stripCode(afterBlocks)
       .replace(/say\s+[""]?build it[""]?.*/i, "")
       .replace(/[""]build it[""]?.*/i, "")
       .replace(/when you'?re ready.*/i, "")

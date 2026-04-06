@@ -2,7 +2,7 @@
 
 import { cn, formatDate } from "@/lib/utils";
 import type { Message } from "@/types/chat";
-import { User, Bot } from "lucide-react";
+import { User, Bot, Sparkles, PenTool, LayoutTemplate } from "lucide-react";
 import { ImageOptions } from "./image-options";
 import { ClarificationCard, parseClarification } from "./clarification-card";
 import { BlockPlanCard, parseBlockPlan } from "./block-plan-card";
@@ -19,6 +19,9 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
   const { text, imagePrompts } = parseContent(message.content, isUser);
   const clarification = !isUser && !isStreaming ? parseClarification(message.content) : null;
   const blockPlan = !isUser && !isStreaming && !clarification ? parseBlockPlan(message.content) : null;
+
+  // Detect if streaming content is building toward a clarification or block plan
+  const streamingPhase = isStreaming && !isUser ? detectStreamingPhase(message.content) : null;
 
   return (
     <div
@@ -67,6 +70,8 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
               assetPrompt={blockPlan.assetPrompt}
               onBuild={(msg) => onSendReply?.(msg)}
             />
+          ) : streamingPhase ? (
+            <StreamingPlaceholder phase={streamingPhase} />
           ) : (
             <div className="whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
           )}
@@ -124,6 +129,72 @@ function renderMarkdown(text: string): string {
     .replace(/`([^`]+)`/g, '<code class="bg-background/50 px-1 py-0.5 rounded text-xs">$1</code>');
 }
 
+type StreamingPhaseType = "clarification" | "blockplan" | "building";
+
+/**
+ * Detect what the AI is building during streaming so we can show
+ * a fun placeholder instead of raw markdown.
+ */
+function detectStreamingPhase(content: string): StreamingPhaseType | null {
+  if (!content || content.length < 30) return null;
+
+  // Check if it's building MJML/HTML (code fence opened)
+  if (/```(?:mjml|html)/i.test(content)) return "building";
+
+  // Check for clarification patterns: numbered bold questions with options
+  const hasClarificationPattern =
+    /\d+\.\s+\*\*\w/.test(content) && /\([\w\s,]+/.test(content);
+  if (hasClarificationPattern) return "clarification";
+
+  // Check for block plan pattern
+  if (/Block\s+\d+:\s+/i.test(content)) return "blockplan";
+
+  return null;
+}
+
+const PHASE_CONFIG = {
+  clarification: {
+    icon: PenTool,
+    title: "Preparing your design questions...",
+    subtitle: "Getting the right details to build your perfect email",
+    color: "text-blue-400",
+  },
+  blockplan: {
+    icon: LayoutTemplate,
+    title: "Designing your layout...",
+    subtitle: "Mapping out the perfect block structure",
+    color: "text-purple-400",
+  },
+  building: {
+    icon: Sparkles,
+    title: "Building your email...",
+    subtitle: "Crafting responsive, production-ready HTML",
+    color: "text-amber-400",
+  },
+} as const;
+
+function StreamingPlaceholder({ phase }: { phase: StreamingPhaseType }) {
+  const config = PHASE_CONFIG[phase];
+  const Icon = config.icon;
+
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className={cn("animate-pulse", config.color)}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-foreground">{config.title}</p>
+        <p className="text-xs text-muted-foreground">{config.subtitle}</p>
+      </div>
+      <span className="inline-flex gap-1 ml-auto">
+        <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" />
+        <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0.15s]" />
+        <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0.3s]" />
+      </span>
+    </div>
+  );
+}
+
 function parseContent(content: string, isUser: boolean): { text: string; imagePrompts: string[] } {
   if (isUser) return { text: content, imagePrompts: [] };
 
@@ -134,10 +205,11 @@ function parseContent(content: string, isUser: boolean): { text: string; imagePr
     imagePrompts.push(match[1].trim());
   }
 
-  // Strip HTML/MJML blocks and image tags from displayed text
+  // Strip ALL code blocks, MJML/HTML tags, and image tags from displayed text
   const text = content
-    .replace(/```(?:html|mjml|xml)[\s\S]*?```/g, "")
-    .replace(/```(?:html|mjml|xml)[\s\S]*/g, "")
+    .replace(/```[\s\S]*?```/g, "")          // all fenced code blocks (closed)
+    .replace(/```[\s\S]*/g, "")              // unclosed code blocks (truncated)
+    .replace(/<\/?mj[\w-]*[^>]*>/gi, "")     // any stray MJML tags
     .replace(imageTagRegex, "")
     .trim();
 
