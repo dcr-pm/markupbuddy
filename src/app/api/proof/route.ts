@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         .eq("user_id", user.id);
 
       if (testUsers && testUsers.length > 0) {
-        rows = testUsers.map((tu) => ({
+        rows = testUsers.map((tu: { name: string; email: string; tier?: string; client?: string; custom_fields?: Record<string, string> }) => ({
           firstName: tu.name.split(" ")[0] || "",
           lastName: tu.name.split(" ").slice(1).join(" ") || "",
           name: tu.name,

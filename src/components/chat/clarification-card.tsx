@@ -61,7 +61,12 @@ export function ClarificationCard({
     setSubmitted(true);
   };
 
-  const answeredCount = Object.keys(selections).length + Object.keys(customInputs).filter(k => customInputs[Number(k)]?.trim()).length;
+  // Count unique answered questions (chip OR custom input, not both)
+  const answeredQuestions = new Set([
+    ...Object.keys(selections).map(Number),
+    ...Object.keys(customInputs).filter(k => customInputs[Number(k)]?.trim()).map(Number),
+  ]);
+  const answeredCount = answeredQuestions.size;
 
   return (
     <div className="space-y-3 mt-2">
@@ -89,24 +94,36 @@ export function ClarificationCard({
                 {opt}
               </button>
             ))}
-            {!selections[i] && (
-              <input
-                type="text"
-                placeholder="Other..."
-                disabled={submitted}
-                className="px-3 py-1.5 rounded-full text-xs border border-border bg-background/50 text-foreground placeholder:text-muted-foreground/50 w-24 focus:w-40 transition-all focus:outline-none focus:border-primary/40"
-                value={customInputs[i] || ""}
-                onChange={(e) =>
-                  setCustomInputs((prev) => ({ ...prev, [i]: e.target.value }))
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && customInputs[i]?.trim()) {
-                    handleSubmit();
-                  }
-                }}
-              />
-            )}
           </div>
+          <input
+            type="text"
+            placeholder="Type your own answer..."
+            disabled={submitted}
+            className={cn(
+              "w-full px-3 py-1.5 rounded-lg text-xs border bg-background/50 text-foreground placeholder:text-muted-foreground/50 transition-all focus:outline-none focus:border-primary/40",
+              customInputs[i]?.trim()
+                ? "border-primary/40"
+                : "border-border",
+              submitted && "opacity-60 cursor-default"
+            )}
+            value={customInputs[i] || ""}
+            onChange={(e) => {
+              setCustomInputs((prev) => ({ ...prev, [i]: e.target.value }));
+              // Clear chip selection when typing custom
+              if (e.target.value.trim()) {
+                setSelections((prev) => {
+                  const next = { ...prev };
+                  delete next[i];
+                  return next;
+                });
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && customInputs[i]?.trim()) {
+                handleSubmit();
+              }
+            }}
+          />
         </div>
       ))}
 
@@ -148,6 +165,20 @@ export function ClarificationCard({
 }
 
 /**
+ * Clean an option string — remove noise like "e.g.", quotes, trailing punctuation.
+ */
+function cleanOption(opt: string): string {
+  return opt
+    .replace(/^e\.?g\.?,?\s*/i, "") // remove "e.g." prefix
+    .replace(/^i\.?e\.?,?\s*/i, "") // remove "i.e." prefix
+    .replace(/^such as\s*/i, "")
+    .replace(/^like\s*/i, "")
+    .replace(/["""]/g, "") // remove smart/straight quotes
+    .replace(/\?+$/, "") // remove trailing question marks
+    .trim();
+}
+
+/**
  * Extract options from question text.
  * Handles: (opt1, opt2, opt3?), "X, Y, or Z?", "X or Y?"
  */
@@ -158,7 +189,8 @@ function extractOptions(text: string): string[] {
     const opts = parensMatch[1]
       .split(/[,?]/)
       .map((o) => o.replace(/\bor\b/gi, "").trim())
-      .filter((o) => o.length > 0 && o.length < 50);
+      .map(cleanOption)
+      .filter((o) => o.length > 1 && o.length < 60);
     if (opts.length >= 2) return opts;
   }
 
@@ -168,7 +200,8 @@ function extractOptions(text: string): string[] {
   if (orParts.length >= 2) {
     const opts = orParts
       .map((o) => o.replace(/^.*?[—–\-:]\s*/, "").trim())
-      .filter((o) => o.length > 0 && o.length < 50);
+      .map(cleanOption)
+      .filter((o) => o.length > 1 && o.length < 60);
     if (opts.length >= 2) return opts;
   }
 
@@ -177,7 +210,8 @@ function extractOptions(text: string): string[] {
   if (commaParts.length >= 3) {
     const opts = commaParts
       .map((o) => o.replace(/\bor\b/gi, "").trim())
-      .filter((o) => o.length > 0 && o.length < 50);
+      .map(cleanOption)
+      .filter((o) => o.length > 1 && o.length < 60);
     if (opts.length >= 2) return opts;
   }
 

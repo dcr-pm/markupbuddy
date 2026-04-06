@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
+  // Dev bypass — skip auth entirely in local development
+  if (process.env.NODE_ENV === "development" && process.env.DEV_AUTH_BYPASS === "true") {
+    return NextResponse.next({ request });
+  }
+
   // Skip if env vars not set or empty
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

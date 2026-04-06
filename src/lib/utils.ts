@@ -19,21 +19,29 @@ export function formatDate(date: Date | string): string {
 }
 
 /**
- * Check if HTML looks complete (not truncated mid-tag).
+ * Check if HTML/MJML looks complete (not truncated mid-tag).
  */
 export function isHtmlComplete(html: string): boolean {
-  // Must end with a closing tag or whitespace after one
   const trimmed = html.trim();
   if (trimmed.length < 50) return false;
+
+  // MJML-specific: must have closing </mjml> tag
+  if (/<mjml[\s>]/i.test(trimmed) && !/<\/mjml>/i.test(trimmed)) return false;
+
+  // HTML-specific: compiled HTML must have closing </html> tag
+  if (/<html[\s>]/i.test(trimmed) && !/<\/html>/i.test(trimmed)) return false;
+
   // Check for obvious truncation: ends mid-tag, mid-attribute, or mid-style
-  if (trimmed.match(/<[^>]*$/)) return false; // ends inside an opening tag
-  if (trimmed.match(/style\s*=\s*"[^"]*$/)) return false; // ends mid-style attr
-  if (trimmed.match(/<!--[\s\S]*$/)) {
-    // Check if comment is closed
-    const lastComment = trimmed.lastIndexOf("<!--");
-    const afterComment = trimmed.slice(lastComment);
+  if (/<[^>]*$/.test(trimmed)) return false; // ends inside an opening tag
+  if (/style\s*=\s*"[^"]*$/.test(trimmed)) return false; // ends mid-style attr
+
+  // Check for unclosed HTML comments
+  const lastCommentOpen = trimmed.lastIndexOf("<!--");
+  if (lastCommentOpen !== -1) {
+    const afterComment = trimmed.slice(lastCommentOpen);
     if (!afterComment.includes("-->")) return false;
   }
+
   return true;
 }
 

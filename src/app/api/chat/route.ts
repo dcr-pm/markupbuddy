@@ -113,10 +113,13 @@ export async function POST(request: Request) {
       messages: chatMessages,
     });
 
-    // Save assistant message after stream completes (background task)
+    // Save assistant message after stream completes (background task with 30s timeout)
     const [responseStream, saveStream] = stream.tee();
 
-    (async () => {
+    const saveWithTimeout = (fn: () => Promise<void>, ms: number) =>
+      Promise.race([fn(), new Promise<void>((_, reject) => setTimeout(() => reject(new Error("Background save timed out")), ms))]);
+
+    saveWithTimeout(async () => {
       const reader = saveStream.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
@@ -206,9 +209,17 @@ export async function POST(request: Request) {
             .eq("id", conversationId);
         }
       } catch (saveError) {
-        console.error("[chat] Background save failed:", saveError instanceof Error ? saveError.message : saveError);
+        console.error("[chat] Background save failed:", {
+          error: saveError instanceof Error ? saveError.message : saveError,
+          conversationId,
+          userId: user.id,
+          hadHtml: !!extractHtmlFromResponse(fullText),
+          textLength: fullText.length,
+        });
       }
-    })();
+    }, 30000).catch((err) => {
+      console.error("[chat] Background save timed out or failed:", err instanceof Error ? err.message : err);
+    });
 
     return new Response(responseStream, {
       headers: {

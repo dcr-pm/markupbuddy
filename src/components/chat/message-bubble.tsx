@@ -5,6 +5,7 @@ import type { Message } from "@/types/chat";
 import { User, Bot } from "lucide-react";
 import { ImageOptions } from "./image-options";
 import { ClarificationCard, parseClarification } from "./clarification-card";
+import { BlockPlanCard, parseBlockPlan } from "./block-plan-card";
 
 interface MessageBubbleProps {
   message: Message;
@@ -17,6 +18,7 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
   const isUser = message.role === "user";
   const { text, imagePrompts } = parseContent(message.content, isUser);
   const clarification = !isUser && !isStreaming ? parseClarification(message.content) : null;
+  const blockPlan = !isUser && !isStreaming && !clarification ? parseBlockPlan(message.content) : null;
 
   return (
     <div
@@ -57,6 +59,13 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
               questions={clarification.questions}
               outro={clarification.outro}
               onSubmit={(answers) => onSendReply?.(answers)}
+            />
+          ) : blockPlan ? (
+            <BlockPlanCard
+              intro={blockPlan.intro}
+              blocks={blockPlan.blocks}
+              assetPrompt={blockPlan.assetPrompt}
+              onBuild={(msg) => onSendReply?.(msg)}
             />
           ) : (
             <div className="whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />

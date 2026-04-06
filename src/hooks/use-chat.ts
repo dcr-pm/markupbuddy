@@ -136,6 +136,8 @@ export function useChat({
 
         const decoder = new TextDecoder();
         let fullText = "";
+        let lastCompiledMjml = "";
+        let pendingCompile: Promise<void> | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -174,24 +176,25 @@ export function useChat({
                 // Extract MJML/HTML for live preview
                 const extracted = extractHtmlFromResponse(fullText);
                 if (extracted) {
-                  // Check if it's MJML (needs server compilation)
                   const isMjmlContent = /<mjml[\s>]/i.test(extracted) || /<mj-/i.test(extracted);
                   if (isMjmlContent && extracted.includes("</mjml>")) {
-                    // Compile MJML server-side
-                    compileMjmlContent(extracted).then((compiled) => {
-                      if (compiled) {
-                        setCurrentHtml(compiled);
-                        setMessages((prev) =>
-                          prev.map((m) =>
-                            m.id === assistantMessage.id
-                              ? { ...m, html_output: compiled }
-                              : m
-                          )
-                        );
-                      }
-                    });
+                    // Only compile once per unique MJML content
+                    if (extracted !== lastCompiledMjml) {
+                      lastCompiledMjml = extracted;
+                      pendingCompile = compileMjmlContent(extracted).then((compiled) => {
+                        if (compiled) {
+                          setCurrentHtml(compiled);
+                          setMessages((prev) =>
+                            prev.map((m) =>
+                              m.id === assistantMessage.id
+                                ? { ...m, html_output: compiled }
+                                : m
+                            )
+                          );
+                        }
+                      });
+                    }
                   } else if (!isMjmlContent) {
-                    // Raw HTML — show directly
                     setCurrentHtml(extracted);
                     setMessages((prev) =>
                       prev.map((m) =>
@@ -208,6 +211,17 @@ export function useChat({
               throw e;
             }
           }
+        }
+
+        // Wait for any pending MJML compilation to finish
+        if (pendingCompile) await pendingCompile;
+
+        // Detect empty AI response
+        if (!fullText.trim()) {
+          setError("AI returned an empty response. Please try again.");
+          setMessages((prev) =>
+            prev.filter((m) => m.id !== assistantMessage.id)
+          );
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;

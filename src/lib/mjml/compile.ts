@@ -3,16 +3,20 @@ interface CompileResult {
   errors: string[];
 }
 
+// Cache the dynamic import so we only load MJML once
+let mjml2htmlCached: ((mjml: string, options: Record<string, unknown>) => { html: string; errors?: { formattedMessage: string }[] }) | null = null;
+
 /**
  * Compile MJML markup to production-ready email HTML.
  * Uses dynamic import to avoid build-time file descriptor issues.
  */
 export async function compileMjml(mjmlSource: string): Promise<CompileResult> {
   try {
-    // Dynamic import to avoid build-time initialization
-    const mjml2html = (await import("mjml")).default;
+    if (!mjml2htmlCached) {
+      mjml2htmlCached = (await import("mjml")).default;
+    }
 
-    const result = mjml2html(mjmlSource, {
+    const result = mjml2htmlCached!(mjmlSource, {
       validationLevel: "soft",
       minify: false,
     });
