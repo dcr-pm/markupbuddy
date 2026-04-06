@@ -35,6 +35,19 @@ export function PreviewFrame({ html, width, darkMode }: PreviewFrameProps) {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
+    const resizeIframe = () => {
+      try {
+        const doc = iframe.contentDocument;
+        if (!doc) return;
+        const height = doc.documentElement?.scrollHeight || doc.body?.scrollHeight;
+        if (height && height > 50) {
+          iframe.style.height = `${height}px`;
+        }
+      } catch {
+        // ignore cross-origin errors
+      }
+    };
+
     try {
       const doc = iframe.contentDocument;
       if (doc) {
@@ -42,17 +55,19 @@ export function PreviewFrame({ html, width, darkMode }: PreviewFrameProps) {
         doc.write(wrappedHtml);
         doc.close();
 
-        // Auto-resize after content loads
-        setTimeout(() => {
-          try {
-            const height = doc.documentElement?.scrollHeight;
-            if (height && height > 50) {
-              iframe.style.height = `${height + 20}px`;
-            }
-          } catch {
-            // ignore
+        // Resize after initial render, after images load, and after fonts load
+        resizeIframe();
+        setTimeout(resizeIframe, 100);
+        setTimeout(resizeIframe, 500);
+        setTimeout(resizeIframe, 1500);
+
+        // Also resize when images finish loading
+        const images = doc.querySelectorAll("img");
+        images.forEach((img) => {
+          if (!img.complete) {
+            img.addEventListener("load", resizeIframe);
           }
-        }, 200);
+        });
       }
     } catch {
       iframe.srcdoc = wrappedHtml;
@@ -72,7 +87,7 @@ export function PreviewFrame({ html, width, darkMode }: PreviewFrameProps) {
         sandbox="allow-same-origin"
         title="Email Preview"
         className="w-full border-0"
-        style={{ height: "500px", minHeight: "200px" }}
+        style={{ height: "auto", minHeight: "200px" }}
       />
     </div>
   );
