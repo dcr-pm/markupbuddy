@@ -17,7 +17,16 @@ export function PreviewFrame({ html, width, darkMode }: PreviewFrameProps) {
   // breaking email HTML by stripping valid email attributes and tags.
   const wrappedHtml = useMemo(() => {
     if (darkMode) {
-      return `<div style="background-color: #1a1a1a; min-height: 100%; padding: 0;">${html}</div>`;
+      // Inject dark mode styles into the body/html, not wrapping in a div
+      // which would break emails that have their own DOCTYPE/html structure
+      if (html.includes("<body")) {
+        return html.replace(
+          /<body([^>]*)>/i,
+          '<body$1 style="background-color: #1a1a1a !important;">'
+        );
+      }
+      // Fallback for HTML without body tag
+      return `<html><body style="background-color: #1a1a1a; margin: 0; padding: 0;">${html}</body></html>`;
     }
     return html;
   }, [html, darkMode]);

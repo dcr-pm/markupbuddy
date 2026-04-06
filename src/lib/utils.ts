@@ -19,41 +19,52 @@ export function formatDate(date: Date | string): string {
 }
 
 /**
- * Repair common HTML issues from AI-generated email output.
- * Fixes orphaned text from broken tags, unclosed tags, etc.
+ * Check if HTML looks complete (not truncated mid-tag).
  */
-export function repairEmailHtml(html: string): string {
-  let repaired = html;
-
-  // Fix orphaned attribute text that appears outside tags
-  // e.g., `center;">` appearing as visible text between tags
-  repaired = repaired.replace(/>([^<]*?)(\w+(?:=["'][^"']*["'])?\s*;?\s*["']?>)/g, (match, between, orphan) => {
-    // Only fix if the "between" text looks like leaked attributes (short, has ;/"/= chars)
-    if (orphan.length < 80 && /[;="']/.test(orphan) && !/\w{4,}/.test(between.trim())) {
-      return `>${between.trim()}`;
-    }
-    return match;
-  });
-
-  // Remove standalone attribute-like text between tags (e.g., center;"> or style="...">)
-  repaired = repaired.replace(/>\s*(?:center|left|right|middle|top|bottom)\s*;?\s*"?\s*>/g, '>');
-
-  // Fix double >> which can happen from broken tags
-  repaired = repaired.replace(/>(\s*)>/g, '>');
-
-  return repaired;
+export function isHtmlComplete(html: string): boolean {
+  // Must end with a closing tag or whitespace after one
+  const trimmed = html.trim();
+  if (trimmed.length < 50) return false;
+  // Check for obvious truncation: ends mid-tag, mid-attribute, or mid-style
+  if (trimmed.match(/<[^>]*$/)) return false; // ends inside an opening tag
+  if (trimmed.match(/style\s*=\s*"[^"]*$/)) return false; // ends mid-style attr
+  if (trimmed.match(/<!--[\s\S]*$/)) {
+    // Check if comment is closed
+    const lastComment = trimmed.lastIndexOf("<!--");
+    const afterComment = trimmed.slice(lastComment);
+    if (!afterComment.includes("-->")) return false;
+  }
+  return true;
 }
 
+/**
+ * Extract MJML or HTML from AI response.
+ * Prefers the LAST match (most recent/updated version).
+ * MJML responses are returned as-is (compiled server-side).
+ */
 export function extractHtmlFromResponse(text: string): string | null {
-  // Try closed fence first
-  const closed = text.match(/```html\s*([\s\S]*?)```/);
-  if (closed) return repairEmailHtml(closed[1].trim());
-  // Fallback: unclosed fence (streaming or truncated)
-  const open = text.match(/```html\s*([\s\S]+)/);
-  if (open) {
-    const html = open[1].trim();
-    if (html.length > 50) return repairEmailHtml(html);
+  // Try MJML fences first (closed)
+  const mjmlMatches = [...text.matchAll(/```(?:mjml|xml)\s*([\s\S]*?)```/g)];
+  if (mjmlMatches.length > 0) {
+    const lastMjml = mjmlMatches[mjmlMatches.length - 1][1].trim();
+    if (lastMjml.includes("<mjml") || lastMjml.includes("<mj-")) {
+      return lastMjml;
+    }
   }
+
+  // Try HTML fences (closed) — use LAST match
+  const htmlMatches = [...text.matchAll(/```html\s*([\s\S]*?)```/g)];
+  if (htmlMatches.length > 0) {
+    return htmlMatches[htmlMatches.length - 1][1].trim();
+  }
+
+  // Fallback: unclosed fence (streaming) — MJML or HTML
+  const openFence = text.match(/```(?:mjml|xml|html)\s*([\s\S]+)/);
+  if (openFence) {
+    const content = openFence[1].trim();
+    if (content.length > 50) return content;
+  }
+
   return null;
 }
 

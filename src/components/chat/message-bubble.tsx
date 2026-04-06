@@ -125,10 +125,10 @@ function parseContent(content: string, isUser: boolean): { text: string; imagePr
     imagePrompts.push(match[1].trim());
   }
 
-  // Strip HTML blocks and image tags from displayed text
+  // Strip HTML/MJML blocks and image tags from displayed text
   const text = content
-    .replace(/```html[\s\S]*?```/g, "")
-    .replace(/```html[\s\S]*/g, "")
+    .replace(/```(?:html|mjml|xml)[\s\S]*?```/g, "")
+    .replace(/```(?:html|mjml|xml)[\s\S]*/g, "")
     .replace(imageTagRegex, "")
     .trim();
 

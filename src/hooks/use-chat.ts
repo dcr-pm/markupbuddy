@@ -4,6 +4,21 @@ import { useState, useCallback, useRef } from "react";
 import type { Message, ChatRequest, BrandContext } from "@/types/chat";
 import { extractHtmlFromResponse, generateId } from "@/lib/utils";
 
+async function compileMjmlContent(mjml: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/compile-mjml", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mjml }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.html || null;
+  } catch {
+    return null;
+  }
+}
+
 interface UseChatOptions {
   conversationId: string | null;
   brandContext?: BrandContext | null;
@@ -156,17 +171,36 @@ export function useChat({
                   )
                 );
 
-                // Extract HTML for live preview
-                const html = extractHtmlFromResponse(fullText);
-                if (html) {
-                  setCurrentHtml(html);
-                  setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantMessage.id
-                        ? { ...m, html_output: html }
-                        : m
-                    )
-                  );
+                // Extract MJML/HTML for live preview
+                const extracted = extractHtmlFromResponse(fullText);
+                if (extracted) {
+                  // Check if it's MJML (needs server compilation)
+                  const isMjmlContent = /<mjml[\s>]/i.test(extracted) || /<mj-/i.test(extracted);
+                  if (isMjmlContent && extracted.includes("</mjml>")) {
+                    // Compile MJML server-side
+                    compileMjmlContent(extracted).then((compiled) => {
+                      if (compiled) {
+                        setCurrentHtml(compiled);
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === assistantMessage.id
+                              ? { ...m, html_output: compiled }
+                              : m
+                          )
+                        );
+                      }
+                    });
+                  } else if (!isMjmlContent) {
+                    // Raw HTML — show directly
+                    setCurrentHtml(extracted);
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMessage.id
+                          ? { ...m, html_output: extracted }
+                          : m
+                      )
+                    );
+                  }
                 }
               }
             } catch (e) {

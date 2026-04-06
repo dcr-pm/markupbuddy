@@ -69,8 +69,8 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
     return () => clearInterval(interval);
   }, [isStreaming]);
 
-  // Show waiting room while streaming
-  if (isStreaming) {
+  // Show waiting room only while streaming AND no HTML yet
+  if (isStreaming && !html) {
     const tip = EMAIL_TIPS[tipIndex];
     return (
       <div className="flex-1 flex items-center justify-center bg-muted/30 p-8">

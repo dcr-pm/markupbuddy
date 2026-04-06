@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { buildSystemPrompt } from "@/lib/anthropic/prompts";
 import { createAIStream } from "@/lib/ai/provider";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { extractHtmlFromResponse } from "@/lib/utils";
+import { extractHtmlFromResponse, isHtmlComplete } from "@/lib/utils";
+import { compileMjml, isMjml } from "@/lib/mjml/compile";
 import type { ChatRequest } from "@/types/chat";
 
 export async function POST(request: Request) {
@@ -85,10 +86,10 @@ export async function POST(request: Request) {
             // Keep the latest HTML in full so the AI can edit it
             chatMessages.push({ role: "assistant", content: msg.content });
           } else {
-            // Strip HTML blocks from older messages to save context
+            // Strip HTML/MJML blocks from older messages to save context
             const compressed = msg.content
-              .replace(/```html[\s\S]*?```/g, "[Previous email HTML omitted — see latest version below]")
-              .replace(/```html[\s\S]*/g, "[Previous email HTML omitted]");
+              .replace(/```(?:html|mjml|xml)[\s\S]*?```/g, "[Previous email omitted — see latest version below]")
+              .replace(/```(?:html|mjml|xml)[\s\S]*/g, "[Previous email omitted]");
             chatMessages.push({ role: "assistant", content: compressed });
           }
         }
@@ -137,8 +138,26 @@ export async function POST(request: Request) {
           }
         }
 
-        // Save assistant message
-        const htmlOutput = extractHtmlFromResponse(fullText);
+        // Extract and compile output
+        let htmlOutput = extractHtmlFromResponse(fullText);
+
+        // If it's MJML, compile to HTML
+        if (htmlOutput && isMjml(htmlOutput)) {
+          const compiled = await compileMjml(htmlOutput);
+          if (compiled.html) {
+            htmlOutput = compiled.html;
+          } else {
+            console.warn("[chat] MJML compilation failed:", compiled.errors);
+            // Keep raw MJML as fallback
+          }
+        }
+
+        // Don't save truncated/incomplete HTML
+        if (htmlOutput && !isHtmlComplete(htmlOutput)) {
+          console.warn("[chat] Detected truncated HTML output, not saving as html_output");
+          htmlOutput = null;
+        }
+
         const { data: savedMessage } = await supabase
           .from("messages")
           .insert({
@@ -186,8 +205,8 @@ export async function POST(request: Request) {
             .update({ updated_at: new Date().toISOString() })
             .eq("id", conversationId);
         }
-      } catch {
-        // Background save failed — not critical
+      } catch (saveError) {
+        console.error("[chat] Background save failed:", saveError instanceof Error ? saveError.message : saveError);
       }
     })();
 
