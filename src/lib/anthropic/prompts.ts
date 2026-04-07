@@ -283,29 +283,45 @@ Every email you generate MUST include ALL of the following. These are non-negoti
 - Test every text element mentally: "Can I read this?" — if there's ANY doubt, fix the contrast
 - Footer text on dark backgrounds: use rgba(255,255,255,0.7) or lighter, NEVER rgba(0,0,0,*) or dark grays
 
-### Social Media Icons (CRITICAL design rules)
-- Use \`<mj-social>\` with \`<mj-social-element>\` for social links — this renders proper icons automatically
-- NEVER include text labels like "Facebook", "Twitter", "Instagram" next to social icons — the icons are self-explanatory
-- Set \`mode="horizontal"\` and \`icon-size="24px"\` for clean icon-only display
-- Use \`text-mode="false"\` on each \`<mj-social-element>\` to hide text labels — icons only
-- Ensure social icon colors contrast with the footer background
-- Example:
-\`<mj-social mode="horizontal" icon-size="24px" padding="10px 0">
-  <mj-social-element name="facebook" href="https://facebook.com/yourcompany" text-mode="false" />
-  <mj-social-element name="twitter" href="https://twitter.com/yourcompany" text-mode="false" />
-  <mj-social-element name="instagram" href="https://instagram.com/yourcompany" text-mode="false" />
-  <mj-social-element name="linkedin" href="https://linkedin.com/company/yourcompany" text-mode="false" />
-</mj-social>\`
+### Footer Section (CRITICAL — copy this template exactly)
 
-### Footer Requirements (always include ALL of these)
-- Company/brand name
-- Physical mailing address
-- Unsubscribe link (text: "Unsubscribe" or "Manage preferences")
-- Privacy policy link
-- Copyright year
-- Footer background: if dark, ALL text must be white or light-colored — verify every line
-- Social icons: icon-only, no text labels, properly spaced
-- All footer content must have adequate padding (20px) and be fully visible — nothing cut off
+The footer is one of the most visible parts of the email. A bad footer (giant stacked icons, left-aligned, poor spacing) makes the ENTIRE email look amateur. You MUST follow this template:
+
+\`<!-- Block N: Footer -->
+<mj-section background-color="#1a1a2e" padding="30px 20px 20px">
+  <mj-column>
+    <!-- footer-social -->
+    <mj-social mode="horizontal" icon-size="24px" align="center" padding="0 0 20px 0">
+      <mj-social-element name="facebook" href="https://facebook.com/company" text-mode="false" />
+      <mj-social-element name="twitter" href="https://twitter.com/company" text-mode="false" />
+      <mj-social-element name="instagram" href="https://instagram.com/company" text-mode="false" />
+      <mj-social-element name="linkedin" href="https://linkedin.com/company/company" text-mode="false" />
+    </mj-social>
+    <!-- footer-links -->
+    <mj-text align="center" color="rgba(255,255,255,0.7)" font-size="12px" padding="0 20px 10px" line-height="20px">
+      <a href="https://example.com/unsubscribe" style="color: rgba(255,255,255,0.7); text-decoration: underline;">Unsubscribe</a> &nbsp;|&nbsp;
+      <a href="https://example.com/privacy" style="color: rgba(255,255,255,0.7); text-decoration: underline;">Privacy Policy</a> &nbsp;|&nbsp;
+      <a href="https://example.com/preferences" style="color: rgba(255,255,255,0.7); text-decoration: underline;">Manage Preferences</a>
+    </mj-text>
+    <!-- footer-legal -->
+    <mj-text align="center" color="rgba(255,255,255,0.5)" font-size="11px" padding="10px 20px 0" line-height="18px">
+      &copy; 2025 Company Name. All rights reserved.<br />
+      123 Main Street, Suite 100, City, ST 10001
+    </mj-text>
+  </mj-column>
+</mj-section>\`
+
+**Footer rules — NEVER violate:**
+- Social icons: ALWAYS \`mode="horizontal"\`, \`align="center"\`, \`icon-size="24px"\`, \`text-mode="false"\` on EACH element
+- NEVER stack social icons vertically — they MUST be in a single horizontal row, centered
+- NEVER left-align social icons — ALWAYS center them
+- NEVER use large icon sizes (>30px) — keep them at 24px
+- All text centered, light-colored on dark backgrounds
+- Links: underlined, rgba(255,255,255,0.7) or similar light color — NEVER dark text on dark backgrounds
+- Legal text (address, copyright): smaller font (11px), slightly more transparent
+- Single \`<mj-column>\` — NEVER split footer content across multiple columns
+- Adequate padding between social icons, links, and legal text
+- Footer background must contrast with the body background
 
 ## Proofing & Test Data
 When the user says "proof this", "test this", or "create test data":

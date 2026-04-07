@@ -275,6 +275,46 @@ function checkLayout(mjml: string): ValidationIssue[] {
     });
   }
 
+  // Detect mj-social without mode="horizontal" — causes ugly vertical stacking
+  const socialRegex = /<mj-social\b[^>]*>/gi;
+  let socialMatch;
+  while ((socialMatch = socialRegex.exec(mjml)) !== null) {
+    const tag = socialMatch[0];
+    if (!/mode="horizontal"/i.test(tag)) {
+      issues.push({
+        type: "layout",
+        severity: "error",
+        message:
+          '<mj-social> is missing mode="horizontal" — social icons will stack vertically. Add mode="horizontal" align="center" icon-size="24px".',
+      });
+    }
+    // Check for missing align="center"
+    if (!/align="center"/i.test(tag)) {
+      issues.push({
+        type: "layout",
+        severity: "error",
+        message:
+          '<mj-social> is missing align="center" — social icons will be left-aligned. Add align="center".',
+      });
+    }
+  }
+
+  // Detect mj-social-element without text-mode="false" — shows ugly text labels
+  const socialElRegex = /<mj-social-element\b[^>]*>/gi;
+  let seMatch;
+  while ((seMatch = socialElRegex.exec(mjml)) !== null) {
+    const tag = seMatch[0];
+    if (!/text-mode="false"/i.test(tag)) {
+      issues.push({
+        type: "layout",
+        severity: "warning",
+        message:
+          '<mj-social-element> is missing text-mode="false" — will show text labels next to icons. Add text-mode="false".',
+      });
+      break; // One warning is enough
+    }
+  }
+
   return issues;
 }
 
