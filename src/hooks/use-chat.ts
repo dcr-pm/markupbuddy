@@ -52,11 +52,20 @@ export function useChat({
           .find((m: Message) => m.role === "assistant" && m.html_output);
         if (lastHtmlMessage) {
           setCurrentHtml(lastHtmlMessage.html_output);
-          // Extract block map from the MJML in the message content
-          const extracted = extractHtmlFromResponse(lastHtmlMessage.content);
-          if (extracted) {
-            const map = extractBlockMap(extracted);
-            if (Object.keys(map).length > 0) setBlockMap(map);
+        }
+        // Extract block map from any assistant message with MJML
+        const allMessages = data.messages || [];
+        for (let i = allMessages.length - 1; i >= 0; i--) {
+          const msg = allMessages[i];
+          if (msg.role === "assistant" && msg.content) {
+            const extracted = extractHtmlFromResponse(msg.content);
+            if (extracted) {
+              const map = extractBlockMap(extracted);
+              if (Object.keys(map).length > 0) {
+                setBlockMap(map);
+                break;
+              }
+            }
           }
         }
       }

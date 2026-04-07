@@ -21,8 +21,8 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels 
   const wrappedHtml = useMemo(() => {
     // Inject block labels if enabled
     let processed = html;
-    if (showBlockLabels && blockMap && Object.keys(blockMap).length > 0) {
-      processed = injectBlockLabels(processed, blockMap);
+    if (showBlockLabels) {
+      processed = injectBlockLabels(processed, blockMap || {});
     }
 
     if (darkMode) {

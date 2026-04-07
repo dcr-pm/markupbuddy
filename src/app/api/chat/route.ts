@@ -17,6 +17,10 @@ import {
 } from "@/lib/email/validators";
 import type { ChatRequest, ValidationCheck } from "@/types/chat";
 
+// Netlify/Vercel: streaming AI responses need extended timeout
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
 const MAX_RETRIES = 2;
 
 interface SaveContext {
@@ -103,9 +107,9 @@ function createValidatedStream(
 
       // Phase 2: Extract, compile, validate
       let htmlOutput: string | null = null;
-      let mjmlSource: string | null = null;
       let finalText = fullText;
 
+      try {
       let rawExtracted = extractHtmlFromResponse(fullText);
 
       // Handle partial block edits — splice into last full MJML
@@ -118,8 +122,20 @@ function createValidatedStream(
         }
       }
 
+      // Auto-wrap if AI output has mj- tags but no <mjml> root
+      if (rawExtracted && isMjml(rawExtracted) && !/<mjml[\s>]/i.test(rawExtracted)) {
+        const hasHead = /<mj-head[\s>]/i.test(rawExtracted);
+        const hasBody = /<mj-body[\s>]/i.test(rawExtracted);
+        if (!hasBody) {
+          rawExtracted = `<mjml><mj-body>${rawExtracted}</mj-body></mjml>`;
+        } else if (!hasHead) {
+          rawExtracted = `<mjml>${rawExtracted}</mjml>`;
+        } else {
+          rawExtracted = `<mjml>${rawExtracted}</mjml>`;
+        }
+      }
+
       if (rawExtracted && isMjml(rawExtracted)) {
-        mjmlSource = rawExtracted;
         const compiled = await compileMjml(rawExtracted);
 
         if (!compiled.html) {
@@ -222,6 +238,9 @@ function createValidatedStream(
       if (htmlOutput && !isHtmlComplete(htmlOutput)) {
         console.warn("[chat] Detected truncated HTML output, not saving as html_output");
         htmlOutput = null;
+      }
+      } catch (validationErr) {
+        console.error("[chat] Validation phase error:", validationErr instanceof Error ? validationErr.message : validationErr);
       }
 
       // Send final done event

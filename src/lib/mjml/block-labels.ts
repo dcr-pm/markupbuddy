@@ -51,49 +51,31 @@ export function injectBlockClasses(mjml: string): string {
 }
 
 /**
- * Inject block label CSS + overlay styles into compiled HTML.
- * Uses ::before pseudo-elements positioned at the top of each block.
+ * Inject block label overlays into compiled HTML.
+ * Finds <!-- Block N: Name --> comments (preserved by MJML compiler)
+ * and inserts small inline label divs after each one.
+ * Falls back to blockMap if provided for cases where comments are stripped.
  */
 export function injectBlockLabels(
   html: string,
   blockMap: BlockMap
 ): string {
-  if (Object.keys(blockMap).length === 0) return html;
+  // Extract block map from HTML comments if blockMap is empty
+  const map = Object.keys(blockMap).length > 0 ? blockMap : extractBlockMap(html);
+  if (Object.keys(map).length === 0) return html;
 
-  const labelRules = Object.entries(blockMap)
-    .map(
-      ([num, name]) =>
-        `.mb-block-${num} { position: relative !important; }
-.mb-block-${num}::before {
-  content: "${num}: ${name.replace(/"/g, '\\"')}";
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  background: rgba(99, 102, 241, 0.9);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  font-family: -apple-system, system-ui, sans-serif;
-  padding: 2px 8px;
-  border-radius: 4px;
-  z-index: 100;
-  pointer-events: none;
-  line-height: 16px;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}`
-    )
-    .join("\n");
+  const labelStyle = `display:inline-block;background:rgba(99,102,241,0.9);color:#fff;font-size:10px;font-weight:600;font-family:-apple-system,system-ui,sans-serif;padding:2px 8px;border-radius:4px;line-height:16px;letter-spacing:0.02em;margin:4px 0 0 4px;`;
 
-  const styleBlock = `<style id="mb-block-labels">\n${labelRules}\n</style>`;
-
-  // Inject before </head> if present, otherwise before </body> or at end
-  if (html.includes("</head>")) {
-    return html.replace("</head>", `${styleBlock}\n</head>`);
+  let result = html;
+  // Insert a label div after each block comment
+  for (const [num, name] of Object.entries(map)) {
+    const commentRegex = new RegExp(
+      `(<!--\\s*Block\\s+${num}\\s*:[^>]*-->)`,
+      "i"
+    );
+    const label = `<div style="${labelStyle}">${num}: ${name.replace(/"/g, "&quot;")}</div>`;
+    result = result.replace(commentRegex, `$1\n${label}`);
   }
-  if (html.includes("</body>")) {
-    return html.replace("</body>", `${styleBlock}\n</body>`);
-  }
-  return html + styleBlock;
+
+  return result;
 }

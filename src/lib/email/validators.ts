@@ -4,7 +4,7 @@
  */
 
 export interface ValidationIssue {
-  type: "compile" | "contrast" | "alt_text" | "size" | "links";
+  type: "compile" | "contrast" | "alt_text" | "size" | "links" | "layout";
   severity: "error" | "warning";
   message: string;
 }
@@ -234,6 +234,51 @@ function auditLinks(mjml: string): ValidationIssue[] {
 }
 
 /**
+ * Check for layout issues that cause text overlap:
+ * - mj-image inside a section with background-url (causes overlap)
+ * - mj-text without padding (causes text to collide)
+ */
+function checkLayout(mjml: string): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  // Detect mj-image inside a section that has background-url — causes text/image overlap
+  const sectionRegex =
+    /<mj-section[^>]*background-url="[^"]*"[^>]*>([\s\S]*?)(?=<mj-section[\s>]|<\/mj-body>|$)/gi;
+  let sMatch;
+  while ((sMatch = sectionRegex.exec(mjml)) !== null) {
+    const content = sMatch[1];
+    if (/<mj-image\b/i.test(content)) {
+      issues.push({
+        type: "layout",
+        severity: "error",
+        message:
+          "Section with background-url contains <mj-image> — this causes text/image overlap. Use background-url for background images OR <mj-image> for inline images, never both in the same section.",
+      });
+    }
+  }
+
+  // Detect mj-text without any padding attribute (risky for overlap)
+  const textNoPadRegex = /<mj-text(?![^>]*padding)[^>]*>/gi;
+  let tMatch;
+  let noPadCount = 0;
+  while ((tMatch = textNoPadRegex.exec(mjml)) !== null) {
+    // Skip if it's inside mj-attributes (global defaults)
+    const before = mjml.slice(0, tMatch.index);
+    if (/<mj-attributes[^>]*>[^]*$/i.test(before) && !/<\/mj-attributes>/i.test(before.slice(before.lastIndexOf("<mj-attributes")))) continue;
+    noPadCount++;
+  }
+  if (noPadCount > 2) {
+    issues.push({
+      type: "layout",
+      severity: "warning",
+      message: `${noPadCount} <mj-text> elements have no explicit padding — this can cause text to overlap. Add padding="10px 20px" to each.`,
+    });
+  }
+
+  return issues;
+}
+
+/**
  * Run all validators on MJML source and compiled HTML.
  * Returns a structured result with individual check outcomes.
  */
@@ -251,8 +296,9 @@ export function validateEmail(
   const altTextIssues = auditAltText(mjml);
   const sizeIssues = checkEmailSize(compiledHtml);
   const linkIssues = auditLinks(mjml);
+  const layoutIssues = checkLayout(mjml);
 
-  allIssues.push(...contrastIssues, ...altTextIssues, ...sizeIssues, ...linkIssues);
+  allIssues.push(...contrastIssues, ...altTextIssues, ...sizeIssues, ...linkIssues, ...layoutIssues);
 
   const checks: ValidationCheck[] = [
     {
@@ -289,6 +335,14 @@ export function validateEmail(
           ? "All links are valid"
           : `${linkIssues.length} link issue(s)`,
     },
+    {
+      name: "Layout",
+      passed: layoutIssues.filter((i) => i.severity === "error").length === 0,
+      detail:
+        layoutIssues.length === 0
+          ? "No overlap or stacking issues"
+          : `${layoutIssues.length} layout issue(s)`,
+    },
   ];
 
   return {
@@ -304,7 +358,7 @@ export function validateEmail(
  */
 export function shouldRetry(issues: ValidationIssue[]): boolean {
   return issues.some(
-    (i) => i.severity === "error" && (i.type === "compile" || i.type === "contrast")
+    (i) => i.severity === "error" && (i.type === "compile" || i.type === "contrast" || i.type === "layout")
   );
 }
 

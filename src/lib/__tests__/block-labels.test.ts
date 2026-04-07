@@ -52,21 +52,24 @@ describe("injectBlockClasses", () => {
 });
 
 describe("injectBlockLabels", () => {
-  const HTML = `<!doctype html><html><head><style>body{margin:0}</style></head><body><div class="mb-block-1">Hero</div></body></html>`;
+  const HTML = `<!doctype html><html><head></head><body><!-- Block 1: Hero --><div>Hero</div><!-- Block 2: CTA --><div>CTA</div></body></html>`;
 
-  it("injects label CSS before </head>", () => {
-    const result = injectBlockLabels(HTML, { 1: "Hero" });
-    expect(result).toContain('id="mb-block-labels"');
-    expect(result).toContain(".mb-block-1::before");
-    expect(result).toContain('content: "1: Hero"');
-    // CSS should be before </head>
-    const stylePos = result.indexOf("mb-block-labels");
-    const headPos = result.indexOf("</head>");
-    expect(stylePos).toBeLessThan(headPos);
+  it("injects inline label divs after block comments", () => {
+    const result = injectBlockLabels(HTML, { 1: "Hero", 2: "CTA" });
+    expect(result).toContain("1: Hero");
+    expect(result).toContain("2: CTA");
+    expect(result).toContain("rgba(99,102,241,0.9)");
   });
 
-  it("returns unchanged HTML for empty block map", () => {
+  it("extracts block map from HTML comments when blockMap is empty", () => {
     const result = injectBlockLabels(HTML, {});
-    expect(result).toBe(HTML);
+    expect(result).toContain("1: Hero");
+    expect(result).toContain("2: CTA");
+  });
+
+  it("returns unchanged HTML when no block comments and empty map", () => {
+    const plain = `<!doctype html><html><body><div>No blocks</div></body></html>`;
+    const result = injectBlockLabels(plain, {});
+    expect(result).toBe(plain);
   });
 });

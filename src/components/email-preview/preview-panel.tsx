@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, startTransition } from "react";
 import { PreviewFrame } from "./preview-frame";
 import { PreviewToolbar } from "./preview-toolbar";
 import { usePreview } from "@/hooks/use-preview";
@@ -119,7 +119,7 @@ export function PreviewPanel({
 
   useEffect(() => {
     if (!isStreaming) return;
-    setTipIndex(Math.floor(Math.random() * EMAIL_TIPS.length));
+    startTransition(() => setTipIndex(Math.floor(Math.random() * EMAIL_TIPS.length)));
     const interval = setInterval(() => {
       setTipIndex((prev) => (prev + 1) % EMAIL_TIPS.length);
     }, 4000);

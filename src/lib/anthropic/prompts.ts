@@ -162,11 +162,35 @@ Every \`<mj-section>\` MUST have an HTML comment label matching the block plan. 
 
 ### Common MJML Patterns:
 
-**Hero section:**
-\`<mj-section background-color="#f0f0f0" padding="40px 20px">
+**Hero with solid background (preferred — most reliable):**
+\`<mj-section background-color="#1a2332" padding="60px 20px">
   <mj-column>
-    <mj-image src="hero.jpg" alt="Hero" width="600px" />
-    <mj-text font-size="28px" font-weight="bold" align="center">Headline</mj-text>
+    <mj-text font-size="32px" font-weight="bold" align="center" color="#ffffff" padding="10px 20px">Headline</mj-text>
+    <mj-text font-size="16px" align="center" color="#cccccc" padding="10px 20px">Subheadline text here</mj-text>
+    <mj-button background-color="#f5a623" color="#1a2332" href="https://example.com" padding="20px 20px">Shop Now</mj-button>
+  </mj-column>
+</mj-section>\`
+
+**Hero with background image (use with care — text only, no mj-image inside):**
+\`<mj-section background-url="https://example.com/hero-bg.jpg" background-size="cover" background-color="#1a2332" padding="60px 20px">
+  <mj-column>
+    <mj-text font-size="32px" font-weight="bold" align="center" color="#ffffff" padding="10px 20px">Headline</mj-text>
+    <mj-text font-size="16px" align="center" color="#cccccc" padding="10px 20px">Subheadline text here</mj-text>
+    <mj-button background-color="#f5a623" color="#1a2332" href="https://example.com" padding="20px 20px">Shop Now</mj-button>
+  </mj-column>
+</mj-section>\`
+IMPORTANT: When using background-url, NEVER put \`<mj-image>\` inside the same section — it causes text/image overlap.
+
+**Hero with standalone image (no background-url needed):**
+\`<mj-section background-color="#f0f0f0" padding="0">
+  <mj-column>
+    <mj-image src="hero.jpg" alt="Summer Sale Hero" width="600px" />
+  </mj-column>
+</mj-section>
+<mj-section background-color="#f0f0f0" padding="30px 20px">
+  <mj-column>
+    <mj-text font-size="28px" font-weight="bold" align="center" padding="10px 20px">Headline</mj-text>
+    <mj-text font-size="16px" align="center" padding="10px 20px">Subheadline</mj-text>
   </mj-column>
 </mj-section>\`
 
@@ -240,6 +264,16 @@ Every email you generate MUST include ALL of the following. These are non-negoti
 - Padding: consistent spacing throughout (20px sections, 10-15px inner elements)
 - ALL content must fit within the 600px container — nothing should overflow, clip, or extend beyond the email edges
 - Every text element must have sufficient padding (min 10px left/right) to prevent edge-clipping
+
+### Text Stacking & Overlap Prevention (CRITICAL)
+- Every \`<mj-text>\` element MUST have explicit \`padding\` — minimum \`padding="10px 20px"\`
+- NEVER place multiple text elements close together without adequate padding between them — text WILL overlap
+- When using \`background-url\` on \`<mj-section>\`, ONLY place text (\`<mj-text>\`, \`<mj-button>\`) inside — NEVER combine with \`<mj-image>\` in the same section, as the image alt text will overlap with your text content
+- NEVER put a caption, subtitle, or description text IN THE SAME \`<mj-column>\` as a hero headline without at least 10px padding between them
+- Hero sections with background images: use generous padding on the section (\`padding="60px 20px"\`) and each text element inside
+- If a section has a background image AND text, keep the text content minimal (headline + subtext + CTA max) with clear vertical spacing
+- Each piece of content (headline, subtext, CTA) must be its own \`<mj-text>\` or \`<mj-button>\` with its own padding — NEVER combine multiple content pieces in a single \`<mj-text>\` tag using \`<br>\` or \`<p>\` tags stacked tightly
+- Test mentally: "If I removed all images, would every text element still be clearly separated?" — if not, add more padding
 
 ### Color Contrast & Visibility (CRITICAL — never violate)
 - ALL text must be clearly readable against its background — minimum 4.5:1 contrast ratio

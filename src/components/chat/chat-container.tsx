@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, startTransition } from "react";
 import { useChat } from "@/hooks/use-chat";
 import { useBrands } from "@/hooks/use-brand";
 import { MessageList } from "./message-list";
@@ -8,7 +8,7 @@ import { ChatInput } from "./chat-input";
 import { BrandPicker } from "@/components/brand/brand-picker";
 import { PreviewPanel } from "@/components/email-preview/preview-panel";
 import { toast } from "sonner";
-import { Eye, EyeOff, ChevronUp, ChevronDown } from "lucide-react";
+import { Eye, EyeOff, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatContainerProps {
@@ -55,7 +55,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
     if (currentHtml && !mobilePreviewOpen) {
       // Only on mobile/tablet (lg breakpoint is 1024px)
       if (window.innerWidth < 1024) {
-        setMobilePreviewOpen(true);
+        startTransition(() => setMobilePreviewOpen(true));
       }
     }
   }, [currentHtml, mobilePreviewOpen]);
