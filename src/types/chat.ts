@@ -32,11 +32,23 @@ export interface Conversation {
   updated_at: string;
 }
 
+export interface ValidationCheck {
+  name: string;
+  passed: boolean;
+  detail?: string;
+}
+
+export interface ValidationResult {
+  passed: boolean;
+  checks: ValidationCheck[];
+}
+
 export interface ChatState {
   messages: Message[];
   isStreaming: boolean;
   currentHtml: string | null;
   error: string | null;
+  validation: ValidationResult | null;
 }
 
 export interface ChatRequest {

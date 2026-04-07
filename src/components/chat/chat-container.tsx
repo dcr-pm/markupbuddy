@@ -24,6 +24,8 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
     isStreaming,
     currentHtml,
     error,
+    validation,
+    isValidating,
     sendMessage,
     stopStreaming,
     loadMessages,
@@ -130,7 +132,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           )}
         >
           <div className="h-[50vh]">
-            <PreviewPanel html={currentHtml} isStreaming={isStreaming} />
+            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} />
           </div>
           <button
             onClick={() => setMobilePreviewOpen(false)}
@@ -160,7 +162,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Desktop preview panel */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} isStreaming={isStreaming} />
+        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} />
       </div>
     </div>
   );

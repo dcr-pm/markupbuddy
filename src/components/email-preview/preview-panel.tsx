@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { PreviewFrame } from "./preview-frame";
 import { PreviewToolbar } from "./preview-toolbar";
 import { usePreview } from "@/hooks/use-preview";
-import { Mail, Lightbulb } from "lucide-react";
+import { Mail, Lightbulb, Check, AlertTriangle, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { ValidationResult } from "@/types/chat";
 
 const EMAIL_TIPS = [
   {
@@ -52,10 +54,63 @@ const EMAIL_TIPS = [
 interface PreviewPanelProps {
   html: string | null;
   isStreaming?: boolean;
+  isValidating?: boolean;
+  validation?: ValidationResult | null;
   onSendTest?: () => void;
 }
 
-export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProps) {
+function QualityIndicators({
+  validation,
+  isValidating,
+}: {
+  validation: ValidationResult | null;
+  isValidating: boolean;
+}) {
+  if (!validation && !isValidating) return null;
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-2 border-t border-border bg-surface/50">
+      {isValidating && !validation && (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Checking quality...</span>
+        </div>
+      )}
+      {validation && (
+        <>
+          {validation.checks.map((check) => (
+            <div
+              key={check.name}
+              className={cn(
+                "flex items-center gap-1 text-[11px] font-medium",
+                check.passed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+              )}
+              title={check.detail}
+            >
+              {check.passed ? (
+                <Check className="w-3 h-3" />
+              ) : (
+                <AlertTriangle className="w-3 h-3" />
+              )}
+              <span>{check.name}</span>
+              {check.detail && check.name === "Size" && (
+                <span className="text-muted-foreground font-normal">({check.detail})</span>
+              )}
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+export function PreviewPanel({
+  html,
+  isStreaming,
+  isValidating,
+  validation,
+  onSendTest,
+}: PreviewPanelProps) {
   const preview = usePreview();
   const [tipIndex, setTipIndex] = useState(0);
 
@@ -74,7 +129,6 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
     return (
       <div className="flex-1 flex items-center justify-center bg-surface p-8">
         <div className="text-center max-w-sm">
-          {/* Animated email icon */}
           <div className="w-16 h-16 mx-auto mb-6 rounded-2xl gradient-bg flex items-center justify-center shadow-lg shadow-primary/20 animate-float">
             <Mail className="w-8 h-8 text-white" />
           </div>
@@ -86,12 +140,10 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
             This usually takes a few seconds
           </p>
 
-          {/* Progress shimmer bar */}
           <div className="w-48 h-1 mx-auto rounded-full bg-border overflow-hidden mb-6">
             <div className="h-full w-1/2 gradient-bg rounded-full animate-shimmer" />
           </div>
 
-          {/* Tip card */}
           <div className="bg-background rounded-xl p-4 border border-border shadow-sm transition-all duration-500">
             <div className="flex items-start gap-2.5 text-left">
               <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -113,7 +165,6 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
     return (
       <div className="flex-1 flex items-center justify-center bg-surface">
         <div className="text-center">
-          {/* Email envelope shape */}
           <div className="relative w-24 h-16 mx-auto mb-5">
             <div className="absolute inset-0 rounded-xl border-2 border-dashed border-border" />
             <div className="absolute inset-x-0 top-0 h-8 overflow-hidden">
@@ -132,7 +183,7 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
     );
   }
 
-  // Rendered email
+  // Rendered email with quality indicators
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-surface">
       <PreviewToolbar
@@ -150,6 +201,7 @@ export function PreviewPanel({ html, isStreaming, onSendTest }: PreviewPanelProp
           darkMode={preview.darkMode}
         />
       </div>
+      <QualityIndicators validation={validation ?? null} isValidating={isValidating ?? false} />
     </div>
   );
 }

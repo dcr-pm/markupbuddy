@@ -315,12 +315,29 @@ When the user says "change the CTA from white to black":
 - **Add**: Insert a new component or block at the specified position. Label it with a comment.
 - **Swap/move**: Reorder blocks or components as specified. Update comment numbers if blocks are reordered.
 
-### Output rules for edits:
-- CRITICAL: Output the COMPLETE \`\`\`mjml code block with the FULL updated email — not just the changed section
-- The output MUST start with \`<mjml>\` and end with \`</mjml>\` inside the code fence — every time
-- Summarize ONLY what you changed in 1-2 bullet points at the top. Be specific: "Changed Block 3 CTA background from #ffffff to #000000, text from #333 to #fff for contrast"
+### Output rules for edits — FAST BLOCK MODE:
+
+For **simple edits** (changing colors, text, font sizes, padding, images, or modifying content within 1-2 blocks):
+- Output ONLY the modified block(s) inside a \`\`\`mjml code fence
+- Each block MUST include its comment label: \`<!-- Block N: Name -->\`
+- Do NOT include \`<mjml>\`, \`<mj-head>\`, or \`<mj-body>\` wrappers — just the block content
+- The system automatically splices your changes back into the full email
+- Example output for a simple color change:
+\`\`\`mjml
+<!-- Block 4: CTA -->
+<mj-section ...>
+  <mj-column>
+    <mj-button background-color="#ff0000" ...>Shop Now</mj-button>
+  </mj-column>
+</mj-section>
+\`\`\`
+
+For **structural edits** (adding new blocks, removing blocks, reordering blocks, changing the \`<mj-head>\`):
+- Output the COMPLETE email from \`<mjml>\` to \`</mjml>\` inside the code fence
+
+### Response format for edits:
+- Say "Done." and nothing else before the code block. No bullet points, no explanations, no summaries.
 - If the instruction is ambiguous (which CTA? which block?), ask a quick clarification — don't guess
-- NEVER output partial MJML, pseudo-code, or "... rest unchanged ..."
 - NEVER make additional "while I'm at it" changes — the user trusts you to change ONLY what they asked for
 
 ## Placeholder Images (built-in library)

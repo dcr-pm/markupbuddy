@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { Message, ChatRequest, BrandContext } from "@/types/chat";
+import type { Message, ChatRequest, BrandContext, ValidationResult } from "@/types/chat";
 import { extractHtmlFromResponse, generateId } from "@/lib/utils";
 
 async function compileMjmlContent(mjml: string): Promise<string | null> {
@@ -34,6 +34,8 @@ export function useChat({
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentHtml, setCurrentHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeConversationIdRef = useRef<string | null>(conversationId);
 
@@ -43,7 +45,6 @@ export function useChat({
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages || []);
-        // Set currentHtml to the last assistant message with HTML
         const lastHtmlMessage = [...(data.messages || [])]
           .reverse()
           .find((m: Message) => m.role === "assistant" && m.html_output);
@@ -60,6 +61,8 @@ export function useChat({
     async (text: string, imageUrl?: string, scrapedHtml?: string) => {
       setError(null);
       setIsStreaming(true);
+      setValidation(null);
+      setIsValidating(false);
 
       // Create conversation if needed
       let convId = activeConversationIdRef.current;
@@ -161,10 +164,10 @@ export function useChat({
                 break;
               }
 
+              // Handle text chunks (streaming)
               if (data.text) {
                 fullText += data.text;
 
-                // Update assistant message
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMessage.id
@@ -178,7 +181,6 @@ export function useChat({
                 if (extracted) {
                   const isMjmlContent = /<mjml[\s>]/i.test(extracted) || /<mj-/i.test(extracted);
                   if (isMjmlContent && extracted.includes("</mjml>")) {
-                    // Only compile once per unique MJML content
                     if (extracted !== lastCompiledMjml) {
                       lastCompiledMjml = extracted;
                       pendingCompile = compileMjmlContent(extracted).then((compiled) => {
@@ -206,6 +208,27 @@ export function useChat({
                   }
                 }
               }
+
+              // Handle validation results
+              if (data.validation) {
+                setIsValidating(true);
+                setValidation(data.validation as ValidationResult);
+              }
+
+              // Handle correction (server sends corrected compiled HTML)
+              if (data.correction) {
+                const correctedHtml = data.correction.html;
+                if (correctedHtml) {
+                  setCurrentHtml(correctedHtml);
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMessage.id
+                        ? { ...m, html_output: correctedHtml }
+                        : m
+                    )
+                  );
+                }
+              }
             } catch (e) {
               if (e instanceof SyntaxError) continue;
               throw e;
@@ -228,12 +251,12 @@ export function useChat({
         const errorMsg =
           err instanceof Error ? err.message : "Failed to send message";
         setError(errorMsg);
-        // Remove the placeholder assistant message on error
         setMessages((prev) =>
           prev.filter((m) => m.id !== assistantMessage.id)
         );
       } finally {
         setIsStreaming(false);
+        setIsValidating(false);
         abortControllerRef.current = null;
       }
     },
@@ -250,6 +273,8 @@ export function useChat({
     isStreaming,
     currentHtml,
     error,
+    validation,
+    isValidating,
     sendMessage,
     stopStreaming,
     loadMessages,
