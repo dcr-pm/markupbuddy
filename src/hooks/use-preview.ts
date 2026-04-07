@@ -7,6 +7,7 @@ export type DeviceMode = "desktop" | "mobile";
 export function usePreview() {
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
   const [darkMode, setDarkMode] = useState(false);
+  const [showBlockLabels, setShowBlockLabels] = useState(false);
 
   const toggleDevice = useCallback(() => {
     setDeviceMode((prev) => (prev === "desktop" ? "mobile" : "desktop"));
@@ -16,14 +17,20 @@ export function usePreview() {
     setDarkMode((prev) => !prev);
   }, []);
 
+  const toggleBlockLabels = useCallback(() => {
+    setShowBlockLabels((prev) => !prev);
+  }, []);
+
   const deviceWidth = deviceMode === "desktop" ? 600 : 375;
 
   return {
     deviceMode,
     darkMode,
+    showBlockLabels,
     deviceWidth,
     toggleDevice,
     toggleDarkMode,
+    toggleBlockLabels,
     setDeviceMode,
     setDarkMode,
   };

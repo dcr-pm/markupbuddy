@@ -9,6 +9,7 @@ import {
   Moon,
   Sun,
   Check,
+  Layers,
 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { inlineStyles } from "@/lib/email/inline";
@@ -19,8 +20,10 @@ interface PreviewToolbarProps {
   html: string;
   deviceMode: DeviceMode;
   darkMode: boolean;
+  showBlockLabels: boolean;
   onToggleDevice: () => void;
   onToggleDarkMode: () => void;
+  onToggleBlockLabels: () => void;
   onSendTest?: () => void;
 }
 
@@ -28,8 +31,10 @@ export function PreviewToolbar({
   html,
   deviceMode,
   darkMode,
+  showBlockLabels,
   onToggleDevice,
   onToggleDarkMode,
+  onToggleBlockLabels,
   onSendTest,
 }: PreviewToolbarProps) {
   const [copied, setCopied] = useState(false);
@@ -104,6 +109,19 @@ export function PreviewToolbar({
           ) : (
             <Moon className="w-4 h-4" />
           )}
+        </button>
+        <div className="w-px h-4 bg-border mx-1" />
+        <button
+          onClick={onToggleBlockLabels}
+          className={cn(
+            "p-1.5 rounded-md transition",
+            showBlockLabels
+              ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+          title={showBlockLabels ? "Hide block labels" : "Show block labels"}
+        >
+          <Layers className="w-4 h-4" />
         </button>
       </div>
 

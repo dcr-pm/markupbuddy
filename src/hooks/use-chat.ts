@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { Message, ChatRequest, BrandContext, ValidationResult } from "@/types/chat";
 import { extractHtmlFromResponse, generateId } from "@/lib/utils";
+import { extractBlockMap, injectBlockClasses, type BlockMap } from "@/lib/mjml/block-labels";
 
 async function compileMjmlContent(mjml: string): Promise<string | null> {
   try {
@@ -36,6 +37,7 @@ export function useChat({
   const [error, setError] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [blockMap, setBlockMap] = useState<BlockMap>({});
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeConversationIdRef = useRef<string | null>(conversationId);
 
@@ -50,6 +52,12 @@ export function useChat({
           .find((m: Message) => m.role === "assistant" && m.html_output);
         if (lastHtmlMessage) {
           setCurrentHtml(lastHtmlMessage.html_output);
+          // Extract block map from the MJML in the message content
+          const extracted = extractHtmlFromResponse(lastHtmlMessage.content);
+          if (extracted) {
+            const map = extractBlockMap(extracted);
+            if (Object.keys(map).length > 0) setBlockMap(map);
+          }
         }
       }
     } catch {
@@ -183,7 +191,11 @@ export function useChat({
                   if (isMjmlContent && extracted.includes("</mjml>")) {
                     if (extracted !== lastCompiledMjml) {
                       lastCompiledMjml = extracted;
-                      pendingCompile = compileMjmlContent(extracted).then((compiled) => {
+                      // Extract block map and inject css-classes for preview labels
+                      const map = extractBlockMap(extracted);
+                      if (Object.keys(map).length > 0) setBlockMap(map);
+                      const withClasses = injectBlockClasses(extracted);
+                      pendingCompile = compileMjmlContent(withClasses).then((compiled) => {
                         if (compiled) {
                           setCurrentHtml(compiled);
                           setMessages((prev) =>
@@ -275,6 +287,7 @@ export function useChat({
     error,
     validation,
     isValidating,
+    blockMap,
     sendMessage,
     stopStreaming,
     loadMessages,

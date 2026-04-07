@@ -2,34 +2,40 @@
 
 import { useMemo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { injectBlockLabels, type BlockMap } from "@/lib/mjml/block-labels";
 
 interface PreviewFrameProps {
   html: string;
   width: number;
   darkMode: boolean;
+  blockMap?: BlockMap;
+  showBlockLabels?: boolean;
 }
 
-export function PreviewFrame({ html, width, darkMode }: PreviewFrameProps) {
+export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // The iframe sandbox="allow-same-origin" (no allow-scripts) is the security
   // boundary — it blocks all JS execution. No need for DOMPurify which was
   // breaking email HTML by stripping valid email attributes and tags.
   const wrappedHtml = useMemo(() => {
+    // Inject block labels if enabled
+    let processed = html;
+    if (showBlockLabels && blockMap && Object.keys(blockMap).length > 0) {
+      processed = injectBlockLabels(processed, blockMap);
+    }
+
     if (darkMode) {
-      // Inject dark mode styles into the body/html, not wrapping in a div
-      // which would break emails that have their own DOCTYPE/html structure
-      if (html.includes("<body")) {
-        return html.replace(
+      if (processed.includes("<body")) {
+        return processed.replace(
           /<body([^>]*)>/i,
           '<body$1 style="background-color: #1a1a1a !important;">'
         );
       }
-      // Fallback for HTML without body tag
-      return `<html><body style="background-color: #1a1a1a; margin: 0; padding: 0;">${html}</body></html>`;
+      return `<html><body style="background-color: #1a1a1a; margin: 0; padding: 0;">${processed}</body></html>`;
     }
-    return html;
-  }, [html, darkMode]);
+    return processed;
+  }, [html, darkMode, blockMap, showBlockLabels]);
 
   useEffect(() => {
     const iframe = iframeRef.current;

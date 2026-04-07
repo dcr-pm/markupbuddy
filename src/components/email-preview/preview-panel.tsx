@@ -7,6 +7,7 @@ import { usePreview } from "@/hooks/use-preview";
 import { Mail, Lightbulb, Check, AlertTriangle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ValidationResult } from "@/types/chat";
+import type { BlockMap } from "@/lib/mjml/block-labels";
 
 const EMAIL_TIPS = [
   {
@@ -56,6 +57,7 @@ interface PreviewPanelProps {
   isStreaming?: boolean;
   isValidating?: boolean;
   validation?: ValidationResult | null;
+  blockMap?: BlockMap;
   onSendTest?: () => void;
 }
 
@@ -109,6 +111,7 @@ export function PreviewPanel({
   isStreaming,
   isValidating,
   validation,
+  blockMap,
   onSendTest,
 }: PreviewPanelProps) {
   const preview = usePreview();
@@ -190,8 +193,10 @@ export function PreviewPanel({
         html={html}
         deviceMode={preview.deviceMode}
         darkMode={preview.darkMode}
+        showBlockLabels={preview.showBlockLabels}
         onToggleDevice={preview.toggleDevice}
         onToggleDarkMode={preview.toggleDarkMode}
+        onToggleBlockLabels={preview.toggleBlockLabels}
         onSendTest={onSendTest}
       />
       <div className="flex-1 overflow-y-auto p-4">
@@ -199,6 +204,8 @@ export function PreviewPanel({
           html={html}
           width={preview.deviceWidth}
           darkMode={preview.darkMode}
+          blockMap={blockMap}
+          showBlockLabels={preview.showBlockLabels}
         />
       </div>
       <QualityIndicators validation={validation ?? null} isValidating={isValidating ?? false} />
