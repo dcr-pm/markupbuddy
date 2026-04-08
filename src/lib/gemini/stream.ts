@@ -32,57 +32,56 @@ export async function createGeminiStream({
   const client = getGeminiClient();
   const encoder = new TextEncoder();
 
-  let stream;
+  // This await throws on connection-level errors (503, rate limit)
+  const stream = await client.models.generateContentStream({
+    model: "gemini-2.5-flash",
+    config: {
+      systemInstruction: systemPrompt,
+      maxOutputTokens: 65536,
+    },
+    contents: messages.map((msg) => ({
+      role: msg.role,
+      parts: msg.parts,
+    })),
+  });
+
+  // Get the async iterator manually so we can read the first chunk
+  // without closing the iterator (for-await + break would close it)
+  const iterator = stream[Symbol.asyncIterator]();
+
+  // Read first chunk to verify the stream is working
+  let firstResult;
   try {
-    stream = await client.models.generateContentStream({
-      model: "gemini-2.5-flash",
-      config: {
-        systemInstruction: systemPrompt,
-        maxOutputTokens: 65536,
-      },
-      contents: messages.map((msg) => ({
-        role: msg.role,
-        parts: msg.parts,
-      })),
-    });
+    firstResult = await iterator.next();
   } catch (error) {
-    // Connection-level errors (503, rate limit) — throw immediately for fallback
+    // First chunk failed — throw for provider fallback
     throw error;
   }
 
-  // Collect first chunk to verify the stream works before returning
-  const chunks: string[] = [];
-  try {
-    for await (const chunk of stream) {
-      const text = chunk.text;
-      if (text) {
-        chunks.push(text);
-        break; // Got first chunk — stream is working
-      }
-    }
-  } catch (error) {
-    // First chunk failed — throw for fallback
-    throw error;
-  }
-
-  if (chunks.length === 0) {
+  if (firstResult.done || !firstResult.value?.text) {
     throw new Error("Empty response from Gemini");
   }
 
+  const firstText = firstResult.value.text;
+
   return new ReadableStream({
     start(controller) {
-      // Replay first chunk
-      const data = JSON.stringify({ text: chunks[0] });
-      controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+      // Replay verified first chunk
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ text: firstText })}\n\n`)
+      );
 
-      // Continue streaming the rest
+      // Continue streaming the rest from the same iterator
       (async () => {
         try {
-          for await (const chunk of stream) {
-            const text = chunk.text;
+          while (true) {
+            const { done, value } = await iterator.next();
+            if (done) break;
+            const text = value?.text;
             if (text) {
-              const d = JSON.stringify({ text });
-              controller.enqueue(encoder.encode(`data: ${d}\n\n`));
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
+              );
             }
           }
           controller.enqueue(
