@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Hammer, Pencil } from "lucide-react";
+import { Hammer, Pencil, GripVertical, Trash2 } from "lucide-react";
 
 interface BlockPlanBlock {
   number: number;
@@ -19,17 +19,67 @@ interface BlockPlanCardProps {
 
 export function BlockPlanCard({
   intro,
-  blocks,
+  blocks: initialBlocks,
   assetPrompt,
   onBuild,
 }: BlockPlanCardProps) {
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [mode, setMode] = useState<"ready" | "editing">("ready");
+  const [blocks, setBlocks] = useState<BlockPlanBlock[]>(initialBlocks);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const modified = blocks !== initialBlocks;
+
+  const handleDelete = useCallback((index: number) => {
+    setBlocks((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      // Renumber
+      return next.map((b, i) => ({ ...b, number: i + 1 }));
+    });
+  }, []);
+
+  const handleDragStart = useCallback((index: number) => {
+    setDragIndex(index);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  }, []);
+
+  const handleDrop = useCallback((dropIndex: number) => {
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    setBlocks((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(dropIndex, 0, moved);
+      return next.map((b, i) => ({ ...b, number: i + 1 }));
+    });
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }, [dragIndex]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }, []);
 
   const handleBuild = () => {
     if (submitted) return;
-    onBuild("build it");
+    if (modified) {
+      // Send the modified block list so the AI knows what to build
+      const blockList = blocks
+        .map((b) => `Block ${b.number}: ${b.name} — ${b.description}`)
+        .join("\n");
+      onBuild(`Build it with this updated plan:\n${blockList}`);
+    } else {
+      onBuild("build it");
+    }
     setSubmitted(true);
   };
 
@@ -45,16 +95,29 @@ export function BlockPlanCard({
         <p className="text-sm text-foreground">{intro}</p>
       )}
 
-      <div className="space-y-1.5">
-        {blocks.map((block) => (
+      <div className="space-y-1">
+        {blocks.map((block, index) => (
           <div
             key={`block-${block.number}-${block.name}`}
-            className="flex items-start gap-2 text-xs"
+            draggable={!submitted}
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDrop={() => handleDrop(index)}
+            onDragEnd={handleDragEnd}
+            className={cn(
+              "flex items-center gap-1.5 text-xs rounded-lg px-1.5 py-1 transition-all group",
+              !submitted && "hover:bg-accent/50",
+              dragIndex === index && "opacity-40",
+              dragOverIndex === index && dragIndex !== index && "border-t-2 border-primary"
+            )}
           >
+            {!submitted && (
+              <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30 cursor-grab active:cursor-grabbing flex-shrink-0" />
+            )}
             <span className="flex-shrink-0 w-5 h-5 rounded bg-primary/10 text-primary font-semibold flex items-center justify-center text-[10px]">
               {block.number}
             </span>
-            <div>
+            <div className="flex-1 min-w-0">
               <span className="font-medium text-foreground">
                 {block.name}
               </span>
@@ -64,6 +127,15 @@ export function BlockPlanCard({
                 </span>
               )}
             </div>
+            {!submitted && blocks.length > 1 && (
+              <button
+                onClick={() => handleDelete(index)}
+                className="flex-shrink-0 p-1 rounded text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 transition-all"
+                title="Remove block"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         ))}
       </div>
