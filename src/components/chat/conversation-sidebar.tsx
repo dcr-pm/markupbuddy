@@ -12,6 +12,8 @@ import {
   Menu,
   X,
   LogOut,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { cn, truncate } from "@/lib/utils";
 import { useState } from "react";
@@ -26,11 +28,13 @@ interface ConversationSidebarProps {
 export function ConversationSidebar({
   userEmail,
 }: ConversationSidebarProps) {
-  const { conversations, createConversation, deleteConversation } =
+  const { conversations, createConversation, deleteConversation, deleteMultipleConversations } =
     useConversations();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const supabase = createClient();
 
   const handleNew = async () => {
@@ -42,6 +46,30 @@ export function ConversationSidebar({
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    const activeDeleted = ids.some((id) => pathname === `/chat/${id}`);
+    await deleteMultipleConversations(ids);
+    setSelectedIds(new Set());
+    setSelectMode(false);
+    if (activeDeleted) router.push("/chat");
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
   };
 
   const userInitial = (userEmail?.[0] || "U").toUpperCase();
@@ -67,34 +95,93 @@ export function ConversationSidebar({
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-0.5">
+      <div className="flex items-center justify-between px-3 py-1.5">
+        {selectMode ? (
+          <>
+            <span className="text-[10px] text-muted-foreground">
+              {selectedIds.size} selected
+            </span>
+            <div className="flex items-center gap-1">
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={handleDeleteSelected}
+                  className="p-1 rounded text-destructive hover:bg-destructive/10 transition"
+                  title="Delete selected"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={exitSelectMode}
+                className="p-1 rounded text-muted-foreground hover:text-foreground transition"
+                title="Cancel"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="text-[10px] text-muted-foreground">Chats</span>
+            {conversations.length > 0 && (
+              <button
+                onClick={() => setSelectMode(true)}
+                className="p-1 rounded text-muted-foreground/50 hover:text-foreground transition"
+                title="Select chats"
+              >
+                <CheckSquare className="w-3 h-3" />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
+      <nav className="flex-1 overflow-y-auto scrollbar-thin p-2 pt-0 space-y-0.5">
         {conversations.map((conv) => {
           const isActive = pathname === `/chat/${conv.id}`;
+          const isSelected = selectedIds.has(conv.id);
           return (
             <div
               key={conv.id}
               className={cn(
                 "group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm cursor-pointer transition-all",
-                isActive
+                isActive && !selectMode
                   ? "bg-background text-foreground shadow-sm border border-border"
-                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                selectMode && isSelected && "bg-primary/5 border border-primary/20"
               )}
-              onClick={() => router.push(`/chat/${conv.id}`)}
+              onClick={() => {
+                if (selectMode) {
+                  toggleSelect(conv.id);
+                } else {
+                  router.push(`/chat/${conv.id}`);
+                }
+              }}
             >
-              <MessageSquare className={cn("w-4 h-4 flex-shrink-0", isActive && "text-primary")} />
+              {selectMode ? (
+                isSelected ? (
+                  <CheckSquare className="w-4 h-4 flex-shrink-0 text-primary" />
+                ) : (
+                  <Square className="w-4 h-4 flex-shrink-0 text-muted-foreground/40" />
+                )
+              ) : (
+                <MessageSquare className={cn("w-4 h-4 flex-shrink-0", isActive && "text-primary")} />
+              )}
               <span className="flex-1 truncate text-xs">
                 {truncate(conv.title, 28)}
               </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteConversation(conv.id);
-                  if (isActive) router.push("/chat");
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
+              {!selectMode && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteConversation(conv.id);
+                    if (isActive) router.push("/chat");
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
             </div>
           );
         })}

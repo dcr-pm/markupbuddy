@@ -58,11 +58,28 @@ export function useConversations() {
     [fetchConversations]
   );
 
+  const deleteMultipleConversations = useCallback(
+    async (ids: string[]) => {
+      try {
+        await Promise.all(
+          ids.map((id) =>
+            fetch(`/api/conversations?id=${id}`, { method: "DELETE" })
+          )
+        );
+        await fetchConversations();
+      } catch {
+        // silently fail
+      }
+    },
+    [fetchConversations]
+  );
+
   return {
     conversations,
     loading,
     createConversation,
     deleteConversation,
+    deleteMultipleConversations,
     refetch: fetchConversations,
   };
 }

@@ -7,6 +7,7 @@ import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
 import { BrandPicker } from "@/components/brand/brand-picker";
 import { PreviewPanel } from "@/components/email-preview/preview-panel";
+import { SendDialog } from "@/components/test-send/send-dialog";
 import { toast } from "sonner";
 import { Eye, EyeOff, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ interface ChatContainerProps {
 export function ChatContainer({ conversationId }: ChatContainerProps) {
   const { brands, activeBrand, setActiveBrand, getBrandContext } = useBrands();
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
 
   const {
     messages,
@@ -133,7 +135,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           )}
         >
           <div className="h-[50vh]">
-            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} />
+            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} />
           </div>
           <button
             onClick={() => setMobilePreviewOpen(false)}
@@ -163,8 +165,16 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Desktop preview panel */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} />
+        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} />
       </div>
+
+      {showSendDialog && currentHtml && conversationId && (
+        <SendDialog
+          html={currentHtml}
+          conversationId={conversationId}
+          onClose={() => setShowSendDialog(false)}
+        />
+      )}
     </div>
   );
 }

@@ -89,6 +89,31 @@ export function ChatInput({
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent) => {
+      // Check for pasted images (screenshots, copied images)
+      const items = e.clipboardData.items;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          e.preventDefault();
+          const file = items[i].getAsFile();
+          if (file && onImageUpload) {
+            (async () => {
+              setUploading(true);
+              const url = await onImageUpload(file);
+              setUploading(false);
+              if (url) {
+                onSend(
+                  text.trim() ||
+                    "Replicate this email design as production-ready HTML.",
+                  url
+                );
+                setText("");
+              }
+            })();
+          }
+          return;
+        }
+      }
+
       const pastedText = e.clipboardData.getData("text");
 
       if (
