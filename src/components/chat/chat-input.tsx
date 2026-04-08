@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Send, Paperclip, Square, Loader2 } from "lucide-react";
+import { Send, Paperclip, Square, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -19,18 +19,23 @@ export function ChatInput({
 }: ChatInputProps) {
   const [text, setText] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = useCallback(() => {
     const trimmed = text.trim();
-    if (!trimmed || isStreaming) return;
-    onSend(trimmed);
+    if ((!trimmed && !attachedImage) || isStreaming) return;
+    onSend(
+      trimmed || "Here's an image — what do you think?",
+      attachedImage || undefined
+    );
     setText("");
+    setAttachedImage(null);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
-  }, [text, isStreaming, onSend]);
+  }, [text, attachedImage, isStreaming, onSend]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -49,10 +54,9 @@ export function ChatInput({
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   }, []);
 
-  const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !onImageUpload) return;
+  const uploadAndAttach = useCallback(
+    async (file: File) => {
+      if (!onImageUpload) return;
 
       const validTypes = [
         "image/png",
@@ -74,17 +78,21 @@ export function ChatInput({
       setUploading(false);
 
       if (url) {
-        onSend(
-          text.trim() ||
-            "Replicate this email design as production-ready HTML.",
-          url
-        );
-        setText("");
+        setAttachedImage(url);
+        textareaRef.current?.focus();
       }
+    },
+    [onImageUpload]
+  );
 
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await uploadAndAttach(file);
       if (fileInputRef.current) fileInputRef.current.value = "";
     },
-    [onImageUpload, onSend, text]
+    [uploadAndAttach]
   );
 
   const handlePaste = useCallback(
@@ -95,20 +103,8 @@ export function ChatInput({
         if (items[i].type.startsWith("image/")) {
           e.preventDefault();
           const file = items[i].getAsFile();
-          if (file && onImageUpload) {
-            (async () => {
-              setUploading(true);
-              const url = await onImageUpload(file);
-              setUploading(false);
-              if (url) {
-                onSend(
-                  text.trim() ||
-                    "Replicate this email design as production-ready HTML.",
-                  url
-                );
-                setText("");
-              }
-            })();
+          if (file) {
+            uploadAndAttach(file);
           }
           return;
         }
@@ -147,12 +143,39 @@ export function ChatInput({
         // Not a URL
       }
     },
-    [onSend]
+    [onSend, uploadAndAttach]
   );
+
+  const removeAttachment = useCallback(() => {
+    setAttachedImage(null);
+  }, []);
 
   return (
     <div className="border-t border-border bg-background p-4">
       <div className="max-w-3xl mx-auto">
+        {/* Attached image preview */}
+        {attachedImage && (
+          <div className="flex items-center gap-2 mb-2 px-2">
+            <div className="relative group">
+              <img
+                src={attachedImage}
+                alt="Attached"
+                className="h-16 rounded-lg border border-border object-cover"
+              />
+              <button
+                onClick={removeAttachment}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow-sm hover:bg-destructive/90 transition"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <ImageIcon className="w-3 h-3" />
+              Image attached — type your message below
+            </span>
+          </div>
+        )}
+
         <div className="flex items-end gap-2 p-2 rounded-2xl border border-border bg-surface shadow-sm focus-within:border-primary/30 focus-within:shadow-md focus-within:shadow-primary/5 transition-all">
           <input
             ref={fileInputRef}
@@ -184,7 +207,11 @@ export function ChatInput({
             }}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder="Describe your email or paste a screenshot..."
+            placeholder={
+              attachedImage
+                ? "Describe what you want to do with this image..."
+                : "Describe your email or paste a screenshot..."
+            }
             rows={1}
             className={cn(
               "flex-1 resize-none bg-transparent px-2 py-2 text-sm",
@@ -204,10 +231,10 @@ export function ChatInput({
           ) : (
             <button
               onClick={handleSubmit}
-              disabled={!text.trim()}
+              disabled={!text.trim() && !attachedImage}
               className={cn(
                 "flex-shrink-0 p-2 rounded-xl transition",
-                text.trim()
+                text.trim() || attachedImage
                   ? "gradient-bg text-white shadow-sm hover:opacity-90"
                   : "bg-muted text-muted-foreground cursor-not-allowed"
               )}
