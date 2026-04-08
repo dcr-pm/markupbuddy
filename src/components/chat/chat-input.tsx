@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Send, Paperclip, Square, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface ChatInputProps {
   onSend: (message: string, imageUrl?: string) => void;
@@ -65,11 +66,11 @@ export function ChatInput({
         "image/webp",
       ];
       if (!validTypes.includes(file.type)) {
-        alert("Please upload a PNG, JPG, GIF, or WebP image.");
+        toast.error("Unsupported format. Please use PNG, JPG, GIF, or WebP.");
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        alert("Image must be under 10MB.");
+        toast.error("Image is too large. Please use an image under 10MB.");
         return;
       }
 

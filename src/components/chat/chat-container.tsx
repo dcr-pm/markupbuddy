@@ -103,8 +103,8 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       const data = await res.json();
       return data.url;
-    } catch (err) {
-      toast.error(`Upload error: ${err instanceof Error ? err.message : "unknown"}`);
+    } catch {
+      toast.error("Could not upload image. Please check your connection and try again.");
       return null;
     }
   }, []);

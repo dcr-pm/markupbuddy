@@ -52,8 +52,20 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Upload failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const raw = error instanceof Error ? error.message : "";
+    console.error("[upload] Failed:", raw);
+
+    let friendly = "Something went wrong uploading your image. Please try again.";
+    if (raw.includes("Bucket not found") || raw.includes("not found")) {
+      friendly = "Image storage is not set up yet. Please contact support.";
+    } else if (raw.includes("exceeded") || raw.includes("quota") || raw.includes("limit")) {
+      friendly = "Storage limit reached. Please try a smaller image or contact support.";
+    } else if (raw.includes("permission") || raw.includes("policy") || raw.includes("denied")) {
+      friendly = "Image storage permissions need to be configured. Please contact support.";
+    } else if (raw.includes("network") || raw.includes("timeout") || raw.includes("ECONNREFUSED")) {
+      friendly = "Could not reach image storage. Please check your connection and try again.";
+    }
+
+    return NextResponse.json({ error: friendly }, { status: 500 });
   }
 }
