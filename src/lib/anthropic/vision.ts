@@ -4,6 +4,10 @@ export function buildVisionMessage(
   imageUrl: string,
   userText: string
 ): Anthropic.MessageParam {
+  const defaultText =
+    "Replicate this email design as production-ready HTML. Match the layout, colors, typography, and spacing as closely as possible.";
+  const urlHint = `\n\n[The uploaded image is hosted at: ${imageUrl} — use this exact URL as the src when placing this image in the email HTML.]`;
+
   return {
     role: "user",
     content: [
@@ -16,9 +20,7 @@ export function buildVisionMessage(
       },
       {
         type: "text",
-        text:
-          userText ||
-          "Replicate this email design as production-ready HTML. Match the layout, colors, typography, and spacing as closely as possible.",
+        text: (userText || defaultText) + urlHint,
       },
     ],
   };

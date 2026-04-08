@@ -70,7 +70,7 @@ function createStreamForProvider(
         if (msg.role === "user" && msg.imageUrl) {
           return {
             role: "user",
-            content: `[Image uploaded: ${msg.imageUrl}]\n\n${msg.content}`,
+            content: `[Image uploaded and hosted at: ${msg.imageUrl} — use this exact URL as the src when placing this image in the email HTML.]\n\n${msg.content}`,
           };
         }
         return { role: msg.role, content: msg.content };
@@ -85,7 +85,7 @@ function createStreamForProvider(
       if (msg.role === "user" && msg.imageUrl) {
         return {
           role: "user",
-          content: `[Image uploaded: ${msg.imageUrl}]\n\n${msg.content}`,
+          content: `[Image uploaded and hosted at: ${msg.imageUrl} — use this exact URL as the src when placing this image in the email HTML.]\n\n${msg.content}`,
         };
       }
       return { role: msg.role, content: msg.content };

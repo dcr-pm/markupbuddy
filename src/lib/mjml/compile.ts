@@ -21,8 +21,11 @@ export async function compileMjml(mjmlSource: string): Promise<CompileResult> {
       minify: false,
     });
 
+    // Fix MJML's default lang="und" to lang="en"
+    const html = result.html.replace(/lang="und"/g, 'lang="en"');
+
     return {
-      html: result.html,
+      html,
       errors: result.errors?.map((e: { formattedMessage: string }) => e.formattedMessage) || [],
     };
   } catch (error) {

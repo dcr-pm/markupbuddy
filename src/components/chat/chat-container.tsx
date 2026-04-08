@@ -8,7 +8,7 @@ import { ChatInput } from "./chat-input";
 import { BrandPicker } from "@/components/brand/brand-picker";
 import { PreviewPanel } from "@/components/email-preview/preview-panel";
 import { SendDialog } from "@/components/test-send/send-dialog";
-import { deleteBlockFromHtml, swapBlocksInHtml } from "@/lib/mjml/block-labels";
+import { deleteBlockFromHtml, swapBlocksInHtml, renameBlockInHtml } from "@/lib/mjml/block-labels";
 import type { BlockAction } from "@/components/email-preview/preview-frame";
 import { toast } from "sonner";
 import { Eye, EyeOff, ChevronUp } from "lucide-react";
@@ -80,6 +80,11 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
     setCurrentHtml(updated);
   }, [currentHtml, setCurrentHtml]);
 
+  const handleBlockRename = useCallback((blockNumber: number, newName: string) => {
+    if (!currentHtml) return;
+    setCurrentHtml(renameBlockInHtml(currentHtml, blockNumber, newName));
+  }, [currentHtml, setCurrentHtml]);
+
   const handleImageUpload = useCallback(async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append("file", file);
@@ -91,14 +96,15 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
       });
 
       if (!res.ok) {
-        toast.error("Failed to upload image");
+        const errData = await res.json().catch(() => ({}));
+        toast.error(`Upload failed: ${errData.error || res.statusText}`);
         return null;
       }
 
       const data = await res.json();
       return data.url;
-    } catch {
-      toast.error("Failed to upload image");
+    } catch (err) {
+      toast.error(`Upload error: ${err instanceof Error ? err.message : "unknown"}`);
       return null;
     }
   }, []);
@@ -153,7 +159,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           )}
         >
           <div className="h-[50vh]">
-            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} />
+            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} />
           </div>
           <button
             onClick={() => setMobilePreviewOpen(false)}
@@ -183,7 +189,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Desktop preview panel */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} />
+        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} />
       </div>
 
       {showSendDialog && currentHtml && conversationId && (

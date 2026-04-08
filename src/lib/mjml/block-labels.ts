@@ -14,7 +14,7 @@ export interface BlockMap {
  */
 export function extractBlockMap(mjml: string): BlockMap {
   const map: BlockMap = {};
-  const matches = mjml.matchAll(/<!--\s*Block\s+(\d+)\s*:\s*([^-]+?)-->/gi);
+  const matches = mjml.matchAll(/<!--\s*Block\s+(\d+)\s*:\s*(.+?)-->/gi);
   for (const match of matches) {
     map[parseInt(match[1])] = match[2].trim();
   }
@@ -28,7 +28,7 @@ export function extractBlockMap(mjml: string): BlockMap {
  */
 export function injectBlockClasses(mjml: string): string {
   return mjml.replace(
-    /<!--\s*Block\s+(\d+)\s*:[^-]*-->\s*<mj-section([^>]*?)>/gi,
+    /<!--\s*Block\s+(\d+)\s*:.*?-->\s*<mj-section([^>]*?)>/gi,
     (full, num, attrs) => {
       // If section already has css-class, append to it; otherwise add new attr
       const blockClass = `mb-block mb-block-${num}`;
@@ -82,7 +82,8 @@ export function injectBlockLabels(
     );
 
     let actions = "";
-    if (showActions) {
+    const isStructural = /^(view in browser|footer)$/i.test(name);
+    if (showActions && !isStructural) {
       const upBtn = num > minBlock
         ? `<button data-block-action="move-up" data-block-num="${num}" style="${btnStyle}" title="Move up">\u2191</button>`
         : "";
@@ -95,11 +96,23 @@ export function injectBlockLabels(
       actions = `<span style="display:inline-flex;gap:2px;margin-left:4px;">${upBtn}${downBtn}${deleteBtn}</span>`;
     }
 
-    const label = `<div style="${labelStyle}">${num}: ${name.replace(/"/g, "&quot;")}${actions}</div>`;
+    const nameSpan = `<span data-block-name data-block-num="${num}" contenteditable="true" style="outline:none;cursor:text;border-bottom:1px dashed rgba(255,255,255,0.3);min-width:20px;" spellcheck="false">${name.replace(/"/g, "&quot;")}</span>`;
+    const label = `<div style="${labelStyle}">${num}: ${nameSpan}${actions}</div>`;
     result = result.replace(commentRegex, `$1\n${label}`);
   }
 
   return result;
+}
+
+/**
+ * Rename a block in compiled HTML by updating its comment.
+ */
+export function renameBlockInHtml(html: string, blockNumber: number, newName: string): string {
+  const regex = new RegExp(
+    `(<!--\\s*Block\\s+${blockNumber}\\s*:).*?(--)`,
+    "i"
+  );
+  return html.replace(regex, `$1 ${newName} $2`);
 }
 
 /**

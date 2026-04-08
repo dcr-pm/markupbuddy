@@ -16,9 +16,10 @@ interface PreviewFrameProps {
   blockMap?: BlockMap;
   showBlockLabels?: boolean;
   onBlockAction?: (action: BlockAction) => void;
+  onBlockRename?: (blockNumber: number, newName: string) => void;
 }
 
-export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels, onBlockAction }: PreviewFrameProps) {
+export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels, onBlockAction, onBlockRename }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // The iframe sandbox="allow-same-origin" (no allow-scripts) is the security
@@ -51,9 +52,13 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
       try {
         const doc = iframe.contentDocument;
         if (!doc) return;
+        // Reset to 0 first so scrollHeight reflects actual content, not old frame size
+        iframe.style.height = "0px";
         const height = doc.documentElement?.scrollHeight || doc.body?.scrollHeight;
         if (height && height > 50) {
           iframe.style.height = `${height}px`;
+        } else {
+          iframe.style.height = "auto";
         }
       } catch {
         // ignore cross-origin errors
@@ -97,11 +102,32 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
             });
           });
         }
+
+        // Attach blur listeners for editable block names
+        if (showBlockLabels && onBlockRename) {
+          const nameSpans = doc.querySelectorAll("[data-block-name]");
+          nameSpans.forEach((span) => {
+            span.addEventListener("blur", () => {
+              const el = span as HTMLElement;
+              const blockNum = parseInt(el.getAttribute("data-block-num") || "0");
+              const newName = el.textContent?.trim() || "";
+              if (blockNum >= 0 && newName) {
+                onBlockRename(blockNum, newName);
+              }
+            });
+            span.addEventListener("keydown", (e) => {
+              if ((e as KeyboardEvent).key === "Enter") {
+                e.preventDefault();
+                (span as HTMLElement).blur();
+              }
+            });
+          });
+        }
       }
     } catch {
       iframe.srcdoc = wrappedHtml;
     }
-  }, [wrappedHtml, showBlockLabels, onBlockAction]);
+  }, [wrappedHtml, showBlockLabels, onBlockAction, onBlockRename]);
 
   return (
     <div
