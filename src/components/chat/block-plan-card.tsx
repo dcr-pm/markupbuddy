@@ -48,7 +48,7 @@ export function BlockPlanCard({
       <div className="space-y-1.5">
         {blocks.map((block) => (
           <div
-            key={block.number}
+            key={`block-${block.number}-${block.name}`}
             className="flex items-start gap-2 text-xs"
           >
             <span className="flex-shrink-0 w-5 h-5 rounded bg-primary/10 text-primary font-semibold flex items-center justify-center text-[10px]">

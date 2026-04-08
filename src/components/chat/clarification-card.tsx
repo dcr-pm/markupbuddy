@@ -73,14 +73,14 @@ export function ClarificationCard({
       <p className="text-sm text-foreground">{intro}</p>
 
       {questions.map((q, i) => (
-        <div key={i} className="space-y-1.5">
+        <div key={`q-${i}`} className="space-y-1.5">
           <p className="text-xs font-medium text-foreground">
             {i + 1}. {q.label}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {q.options.map((opt) => (
               <button
-                key={opt}
+                key={`${i}-${opt}`}
                 onClick={() => handleSelect(i, opt)}
                 disabled={submitted}
                 className={cn(

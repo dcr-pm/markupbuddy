@@ -81,7 +81,7 @@ export function ImageOptions({ prompt, onSelect }: ImageOptionsProps) {
       <div className="grid grid-cols-3 gap-2">
         {images.map((img, i) => (
           <button
-            key={i}
+            key={img.url || i}
             onClick={() => handleSelect(img.url)}
             className={cn(
               "relative rounded-lg overflow-hidden border-2 transition",

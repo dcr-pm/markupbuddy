@@ -326,7 +326,7 @@ export function BrandForm({
 
         {/* Extra colors */}
         {(form.custom_settings.extra_colors || []).map((color, i) => (
-          <div key={i} className="flex items-center gap-2">
+          <div key={`extra-color-${i}`} className="flex items-center gap-2">
             <input
               type="color"
               value={color.hex}

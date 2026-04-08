@@ -176,7 +176,7 @@ export function SendDialog({
               <h3 className="text-sm font-medium">Results</h3>
               {results.map((r, i) => (
                 <div
-                  key={i}
+                  key={`${r.email}-${i}`}
                   className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-muted"
                 >
                   {r.status === "sent" ? (
