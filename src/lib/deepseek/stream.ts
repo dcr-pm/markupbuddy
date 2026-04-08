@@ -41,10 +41,12 @@ export async function createDeepSeekStream({
 
   return new ReadableStream({
     async start(controller) {
+      let gotContent = false;
       try {
         for await (const chunk of stream) {
           const text = chunk.choices[0]?.delta?.content;
           if (text) {
+            gotContent = true;
             const data = JSON.stringify({ text });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
@@ -59,12 +61,16 @@ export async function createDeepSeekStream({
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ error: errorMessage })}\n\n`
-          )
-        );
-        controller.close();
+        if (!gotContent) {
+          controller.error(error);
+        } else {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ error: errorMessage })}\n\n`
+            )
+          );
+          controller.close();
+        }
       }
     },
   });

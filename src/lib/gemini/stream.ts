@@ -46,10 +46,12 @@ export async function createGeminiStream({
 
   return new ReadableStream({
     async start(controller) {
+      let gotContent = false;
       try {
         for await (const chunk of stream) {
           const text = chunk.text;
           if (text) {
+            gotContent = true;
             const data = JSON.stringify({ text });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
@@ -64,12 +66,18 @@ export async function createGeminiStream({
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ error: errorMessage })}\n\n`
-          )
-        );
-        controller.close();
+        if (!gotContent) {
+          // No content yet — throw so provider fallback can trigger
+          controller.error(error);
+        } else {
+          // Mid-stream error — forward to client since we can't switch providers
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ error: errorMessage })}\n\n`
+            )
+          );
+          controller.close();
+        }
       }
     },
   });
