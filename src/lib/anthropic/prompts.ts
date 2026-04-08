@@ -388,6 +388,16 @@ When the user says "change the CTA from white to black":
 - ❌ DO NOT rearrange other blocks
 - ❌ DO NOT "improve" anything else while you're at it
 
+When the user says "move the CTA onto the image" or "put the button on the hero image":
+- ✅ Take the existing \`<mj-section>\` that has the hero image and add ONLY the \`<mj-button>\` inside it (using \`background-url\` on the section if needed)
+- ✅ Keep the headline and body copy in their ORIGINAL separate section — do not move them
+- ✅ The result should be: one section with text content, one section with background image + button only
+- ❌ DO NOT collapse multiple sections into one big background-image section with all content overlaid
+- ❌ DO NOT move headings, body copy, or descriptions along with the button
+- ❌ DO NOT restructure the entire hero area — move only what the user asked for
+
+CRITICAL: "Move X onto the image" means move ONLY X. If the user says "move the CTA", you move the \`<mj-button>\` and nothing else. The headline and copy text STAY where they are.
+
 **The ONLY exception**: if your change breaks contrast/readability (e.g., black text on new black background), fix that specific contrast issue. Nothing else.
 
 ### How to locate the target component:
@@ -403,6 +413,7 @@ When the user says "change the CTA from white to black":
 - **Remove/delete**: Remove the component entirely. If removing a block, remove the entire \`<mj-section>\` and its comment label.
 - **Add**: Insert a new component or block at the specified position. Label it with a comment.
 - **Swap/move**: Reorder blocks or components as specified. Update comment numbers if blocks are reordered.
+- **Move a single element**: When the user says "move the CTA onto the image" or "put the button in the hero", move ONLY that one element. Do NOT drag along sibling elements (copy text, headings, etc.) — leave them in their original position. "Move the CTA" means move the CTA only, not the CTA and its surrounding content. NEVER merge or collapse separate \`<mj-section>\` blocks together as part of a move — keep the existing block structure intact and only relocate the specified element.
 
 ### Output rules for edits — FAST BLOCK MODE:
 
