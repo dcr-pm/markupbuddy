@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, startTransition } from "react";
-import { PreviewFrame } from "./preview-frame";
+import { PreviewFrame, type BlockAction } from "./preview-frame";
 import { PreviewToolbar } from "./preview-toolbar";
 import { usePreview } from "@/hooks/use-preview";
 import { Mail, Lightbulb, Check, AlertTriangle, Loader2 } from "lucide-react";
@@ -59,6 +59,7 @@ interface PreviewPanelProps {
   validation?: ValidationResult | null;
   blockMap?: BlockMap;
   onSendTest?: () => void;
+  onBlockAction?: (action: BlockAction) => void;
 }
 
 function QualityIndicators({
@@ -113,6 +114,7 @@ export function PreviewPanel({
   validation,
   blockMap,
   onSendTest,
+  onBlockAction,
 }: PreviewPanelProps) {
   const preview = usePreview();
   const [tipIndex, setTipIndex] = useState(0);
@@ -206,6 +208,7 @@ export function PreviewPanel({
           darkMode={preview.darkMode}
           blockMap={blockMap}
           showBlockLabels={preview.showBlockLabels}
+          onBlockAction={onBlockAction}
         />
       </div>
       <QualityIndicators validation={validation ?? null} isValidating={isValidating ?? false} />

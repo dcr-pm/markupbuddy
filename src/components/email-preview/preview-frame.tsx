@@ -4,15 +4,21 @@ import { useMemo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { injectBlockLabels, type BlockMap } from "@/lib/mjml/block-labels";
 
+export type BlockAction = {
+  type: "delete" | "move-up" | "move-down";
+  blockNumber: number;
+};
+
 interface PreviewFrameProps {
   html: string;
   width: number;
   darkMode: boolean;
   blockMap?: BlockMap;
   showBlockLabels?: boolean;
+  onBlockAction?: (action: BlockAction) => void;
 }
 
-export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels }: PreviewFrameProps) {
+export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels, onBlockAction }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // The iframe sandbox="allow-same-origin" (no allow-scripts) is the security
@@ -22,7 +28,7 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels 
     // Inject block labels if enabled
     let processed = html;
     if (showBlockLabels) {
-      processed = injectBlockLabels(processed, blockMap || {});
+      processed = injectBlockLabels(processed, blockMap || {}, !!onBlockAction);
     }
 
     if (darkMode) {
@@ -35,7 +41,7 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels 
       return `<html><body style="background-color: #1a1a1a; margin: 0; padding: 0;">${processed}</body></html>`;
     }
     return processed;
-  }, [html, darkMode, blockMap, showBlockLabels]);
+  }, [html, darkMode, blockMap, showBlockLabels, onBlockAction]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -74,11 +80,28 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels 
             img.addEventListener("load", resizeIframe);
           }
         });
+
+        // Attach click listeners for block action buttons
+        if (showBlockLabels && onBlockAction) {
+          const buttons = doc.querySelectorAll("[data-block-action]");
+          buttons.forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const el = e.currentTarget as HTMLElement;
+              const actionType = el.getAttribute("data-block-action") as BlockAction["type"];
+              const blockNum = parseInt(el.getAttribute("data-block-num") || "0");
+              if (actionType && blockNum) {
+                onBlockAction({ type: actionType, blockNumber: blockNum });
+              }
+            });
+          });
+        }
       }
     } catch {
       iframe.srcdoc = wrappedHtml;
     }
-  }, [wrappedHtml]);
+  }, [wrappedHtml, showBlockLabels, onBlockAction]);
 
   return (
     <div

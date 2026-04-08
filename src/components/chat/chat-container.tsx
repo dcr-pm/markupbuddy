@@ -8,6 +8,8 @@ import { ChatInput } from "./chat-input";
 import { BrandPicker } from "@/components/brand/brand-picker";
 import { PreviewPanel } from "@/components/email-preview/preview-panel";
 import { SendDialog } from "@/components/test-send/send-dialog";
+import { deleteBlockFromHtml, swapBlocksInHtml } from "@/lib/mjml/block-labels";
+import type { BlockAction } from "@/components/email-preview/preview-frame";
 import { toast } from "sonner";
 import { Eye, EyeOff, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,6 +34,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
     sendMessage,
     stopStreaming,
     loadMessages,
+    setCurrentHtml,
   } = useChat({
     conversationId,
     brandContext: getBrandContext(),
@@ -61,6 +64,21 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
       }
     }
   }, [currentHtml, mobilePreviewOpen]);
+
+  const handleBlockAction = useCallback((action: BlockAction) => {
+    if (!currentHtml) return;
+    let updated: string;
+    if (action.type === "delete") {
+      updated = deleteBlockFromHtml(currentHtml, action.blockNumber);
+    } else if (action.type === "move-up") {
+      updated = swapBlocksInHtml(currentHtml, action.blockNumber - 1, action.blockNumber);
+    } else if (action.type === "move-down") {
+      updated = swapBlocksInHtml(currentHtml, action.blockNumber, action.blockNumber + 1);
+    } else {
+      return;
+    }
+    setCurrentHtml(updated);
+  }, [currentHtml, setCurrentHtml]);
 
   const handleImageUpload = useCallback(async (file: File): Promise<string | null> => {
     const formData = new FormData();
@@ -135,7 +153,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           )}
         >
           <div className="h-[50vh]">
-            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} />
+            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} />
           </div>
           <button
             onClick={() => setMobilePreviewOpen(false)}
@@ -165,7 +183,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Desktop preview panel */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} />
+        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} />
       </div>
 
       {showSendDialog && currentHtml && conversationId && (
