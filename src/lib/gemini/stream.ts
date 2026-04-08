@@ -32,45 +32,68 @@ export async function createGeminiStream({
   const client = getGeminiClient();
   const encoder = new TextEncoder();
 
-  const stream = await client.models.generateContentStream({
-    model: "gemini-2.5-flash",
-    config: {
-      systemInstruction: systemPrompt,
-      maxOutputTokens: 65536,
-    },
-    contents: messages.map((msg) => ({
-      role: msg.role,
-      parts: msg.parts,
-    })),
-  });
+  let stream;
+  try {
+    stream = await client.models.generateContentStream({
+      model: "gemini-2.5-flash",
+      config: {
+        systemInstruction: systemPrompt,
+        maxOutputTokens: 65536,
+      },
+      contents: messages.map((msg) => ({
+        role: msg.role,
+        parts: msg.parts,
+      })),
+    });
+  } catch (error) {
+    // Connection-level errors (503, rate limit) — throw immediately for fallback
+    throw error;
+  }
+
+  // Collect first chunk to verify the stream works before returning
+  const chunks: string[] = [];
+  try {
+    for await (const chunk of stream) {
+      const text = chunk.text;
+      if (text) {
+        chunks.push(text);
+        break; // Got first chunk — stream is working
+      }
+    }
+  } catch (error) {
+    // First chunk failed — throw for fallback
+    throw error;
+  }
+
+  if (chunks.length === 0) {
+    throw new Error("Empty response from Gemini");
+  }
 
   return new ReadableStream({
-    async start(controller) {
-      let gotContent = false;
-      try {
-        for await (const chunk of stream) {
-          const text = chunk.text;
-          if (text) {
-            gotContent = true;
-            const data = JSON.stringify({ text });
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-          }
-        }
+    start(controller) {
+      // Replay first chunk
+      const data = JSON.stringify({ text: chunks[0] });
+      controller.enqueue(encoder.encode(`data: ${data}\n\n`));
 
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ done: true, usage: {} })}\n\n`
-          )
-        );
-        controller.close();
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        if (!gotContent) {
-          // No content yet — throw so provider fallback can trigger
-          controller.error(error);
-        } else {
-          // Mid-stream error — forward to client since we can't switch providers
+      // Continue streaming the rest
+      (async () => {
+        try {
+          for await (const chunk of stream) {
+            const text = chunk.text;
+            if (text) {
+              const d = JSON.stringify({ text });
+              controller.enqueue(encoder.encode(`data: ${d}\n\n`));
+            }
+          }
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ done: true, usage: {} })}\n\n`
+            )
+          );
+          controller.close();
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
           controller.enqueue(
             encoder.encode(
               `data: ${JSON.stringify({ error: errorMessage })}\n\n`
@@ -78,7 +101,7 @@ export async function createGeminiStream({
           );
           controller.close();
         }
-      }
+      })();
     },
   });
 }
