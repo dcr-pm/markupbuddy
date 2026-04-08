@@ -114,13 +114,27 @@ function createVerifiedStream(
 
       const firstChunk = decoder.decode(value, { stream: true });
 
-      // Check if first chunk contains an error
+      // Check if first chunk contains an error or unavailable status
+      const chunkText = firstChunk.toLowerCase();
+      if (
+        chunkText.includes("unavailable") ||
+        chunkText.includes("503") ||
+        chunkText.includes("overloaded") ||
+        chunkText.includes("high demand") ||
+        chunkText.includes("resource exhausted") ||
+        chunkText.includes("rate limit") ||
+        chunkText.includes("too many requests")
+      ) {
+        reject(new Error(firstChunk.slice(0, 200)));
+        return;
+      }
+
       for (const line of firstChunk.split("\n")) {
         if (!line.startsWith("data: ")) continue;
         try {
           const data = JSON.parse(line.slice(6));
           if (data.error) {
-            reject(new Error(data.error));
+            reject(new Error(typeof data.error === "string" ? data.error : JSON.stringify(data.error)));
             return;
           }
         } catch {
