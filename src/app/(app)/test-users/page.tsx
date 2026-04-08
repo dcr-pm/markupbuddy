@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import type { TestUser } from "@/types/test-user";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function TestUsersPage() {
@@ -20,9 +20,9 @@ export default function TestUsersPage() {
     const res = await fetch("/api/test-users");
     if (res.ok) {
       const data = await res.json();
-      setTestUsers(data.testUsers);
+      startTransition(() => setTestUsers(data.testUsers));
     }
-    setLoading(false);
+    startTransition(() => setLoading(false));
   }, []);
 
   useEffect(() => {

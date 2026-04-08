@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { toast } from "sonner";
@@ -8,14 +8,14 @@ import { cn } from "@/lib/utils";
 
 type Theme = "light" | "dark" | "system";
 
-export default function SettingsPage() {
-  const [theme, setTheme] = useState<Theme>("system");
-  const supabase = createClient();
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+  return (localStorage.getItem("theme") as Theme) || "system";
+}
 
-  useEffect(() => {
-    const stored = localStorage.getItem("theme") as Theme | null;
-    if (stored) setTheme(stored);
-  }, []);
+export default function SettingsPage() {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const supabase = createClient();
 
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);

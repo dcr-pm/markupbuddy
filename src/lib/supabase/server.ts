@@ -27,12 +27,15 @@ export async function createClient() {
     if (!url?.trim() || !serviceKey?.trim()) {
       throw new Error("DEV_AUTH_BYPASS requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const client = createServiceClient(url, serviceKey) as any;
     // Override auth methods so app code gets a valid user
     const originalAuth = client.auth;
     client.auth = {
       ...originalAuth,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       getUser: async () => ({ data: { user: DEV_USER as any }, error: null }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       getSession: async () => ({ data: { session: { user: DEV_USER } as any }, error: null }),
       signOut: async () => ({ error: null }),
     };

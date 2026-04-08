@@ -94,21 +94,6 @@ function createStreamForProvider(
   return createGeminiStream({ systemPrompt, messages: geminiMessages });
 }
 
-function isRateLimitError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const msg = error.message.toLowerCase();
-    return (
-      msg.includes("rate limit") ||
-      msg.includes("rate_limit") ||
-      msg.includes("429") ||
-      msg.includes("quota") ||
-      msg.includes("resource exhausted") ||
-      msg.includes("too many requests")
-    );
-  }
-  return false;
-}
-
 /**
  * Wraps a provider stream with error detection on the first chunk.
  * If the first chunk contains an error, throws so fallback can trigger.

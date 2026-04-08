@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import type { Version } from "@/types/version";
 import { formatDate, cn } from "@/lib/utils";
 import { History, ChevronRight } from "lucide-react";
@@ -24,7 +24,7 @@ export function VersionList({
     );
     if (res.ok) {
       const data = await res.json();
-      setVersions(data.versions || []);
+      startTransition(() => setVersions(data.versions || []));
     }
   }, [conversationId]);
 
