@@ -70,4 +70,10 @@ export interface BrandContext {
   footer_html: string | null;
   tone: string | null;
   scripting_engine: string | null;
+  tagline?: string;
+  brand_story?: string;
+  heading_font?: string;
+  guidelines_url?: string;
+  social_links?: Record<string, string>;
+  extra_colors?: { name: string; hex: string }[];
 }

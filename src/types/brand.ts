@@ -35,6 +35,23 @@ export type ScriptingEngine =
   | "merge_tags"
   | "vtl";
 
+export interface BrandCustomSettings {
+  tagline?: string;
+  brand_story?: string;
+  guidelines_url?: string;
+  social_links?: {
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+    linkedin?: string;
+    youtube?: string;
+    tiktok?: string;
+  };
+  extra_colors?: { name: string; hex: string }[];
+  heading_font?: string;
+  [key: string]: unknown;
+}
+
 export interface BrandFormData {
   name: string;
   company_name: string;
@@ -48,4 +65,5 @@ export interface BrandFormData {
   tone: BrandTone;
   scripting_engine: ScriptingEngine;
   parent_brand_id: string | null;
+  custom_settings: BrandCustomSettings;
 }

@@ -107,6 +107,13 @@ export function useBrands() {
       }
     }
 
+    const cs = (brand.custom_settings || {}) as Record<string, unknown>;
+    const socialLinks = (cs.social_links || {}) as Record<string, string>;
+    // Filter out empty social links
+    const filteredSocial = Object.fromEntries(
+      Object.entries(socialLinks).filter(([, v]) => v)
+    );
+
     return {
       company_name: brand.company_name,
       logo_url: brand.logo_url,
@@ -118,6 +125,14 @@ export function useBrands() {
       footer_html: brand.footer_html,
       tone: brand.tone,
       scripting_engine: brand.scripting_engine,
+      tagline: (cs.tagline as string) || undefined,
+      brand_story: (cs.brand_story as string) || undefined,
+      heading_font: (cs.heading_font as string) || undefined,
+      guidelines_url: (cs.guidelines_url as string) || undefined,
+      social_links: Object.keys(filteredSocial).length > 0 ? filteredSocial : undefined,
+      extra_colors: (cs.extra_colors as { name: string; hex: string }[])?.length
+        ? (cs.extra_colors as { name: string; hex: string }[])
+        : undefined,
     };
   }, [activeBrand, brands]);
 

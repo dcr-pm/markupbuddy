@@ -589,12 +589,32 @@ export function buildSystemPrompt(brandContext?: BrandContext | null): string {
       prompt += `\n- Accent Color: ${brandContext.accent_color}`;
     if (brandContext.font_family)
       prompt += `\n- Font Family: ${brandContext.font_family}`;
+    if (brandContext.heading_font)
+      prompt += `\n- Heading Font Family: ${brandContext.heading_font}`;
     if (brandContext.tone)
       prompt += `\n- Tone of Voice: ${brandContext.tone}`;
+    if (brandContext.tagline)
+      prompt += `\n- Tagline/Slogan: "${brandContext.tagline}"`;
+    if (brandContext.brand_story)
+      prompt += `\n- Brand Story: ${brandContext.brand_story}`;
+    if (brandContext.extra_colors && brandContext.extra_colors.length > 0) {
+      prompt += `\n- Additional Brand Colors:`;
+      for (const c of brandContext.extra_colors) {
+        prompt += `\n  - ${c.name || "Unnamed"}: ${c.hex}`;
+      }
+    }
+    if (brandContext.social_links && Object.keys(brandContext.social_links).length > 0) {
+      prompt += `\n- Social Media Links (use these in footer social icons):`;
+      for (const [platform, url] of Object.entries(brandContext.social_links)) {
+        prompt += `\n  - ${platform}: ${url}`;
+      }
+    }
     if (brandContext.header_html)
       prompt += `\n- Header HTML (include at top of every email):\n\`\`\`html\n${brandContext.header_html}\n\`\`\``;
     if (brandContext.footer_html)
       prompt += `\n- Footer HTML (include at bottom of every email):\n\`\`\`html\n${brandContext.footer_html}\n\`\`\``;
+    if (brandContext.guidelines_url)
+      prompt += `\n- Brand Guidelines Document: ${brandContext.guidelines_url} (reference this for design decisions)`;
     prompt +=
       "\n\nApply this brand to every email you generate unless the user explicitly says otherwise.";
 

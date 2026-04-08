@@ -8,7 +8,7 @@ function getAdminClient() {
   );
 }
 
-export async function uploadImage(
+export async function uploadFile(
   file: Buffer,
   contentType: string,
   extension: string
