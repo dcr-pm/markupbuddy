@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Message } from "@/types/chat";
 import { MessageBubble } from "./message-bubble";
-import { Mail, Megaphone, Tag, Newspaper, RefreshCw, ShoppingCart } from "lucide-react";
+import { Mail, Megaphone, Tag, Newspaper, Blocks } from "lucide-react";
 
 interface MessageListProps {
   messages: Message[];
@@ -74,10 +74,9 @@ export function MessageList({ messages, isStreaming, onImageSelected, onSuggesti
 }
 
 const SUGGESTIONS = [
+  { text: "Build me a single HTML block — hero banner with headline and CTA", icon: Blocks },
   { text: "I need a welcome email for new subscribers", icon: Mail },
   { text: "Help me design a product launch announcement", icon: Megaphone },
   { text: "I want to build a promotional sale email", icon: Tag },
   { text: "Create a newsletter with multiple article sections", icon: Newspaper },
-  { text: "Design a re-engagement win-back email", icon: RefreshCw },
-  { text: "Build an abandoned cart recovery email", icon: ShoppingCart },
 ];
