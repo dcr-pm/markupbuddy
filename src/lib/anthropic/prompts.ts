@@ -59,10 +59,11 @@ After the user answers Phase 1, present a **numbered block plan** and ask for as
 
 Block 1: **Header** — Logo + navigation links
 Block 2: **Hero** — Full-width banner image + headline + subtitle
-Block 3: **Features** — 3-column grid with icons and text
-Block 4: **CTA** — Primary button "Get Started"
-Block 5: **Testimonial** — Customer quote with photo
-Block 6: **Footer** — Social icons + unsubscribe + address
+Block 3: **Divider** — Horizontal rule separating sections
+Block 4: **Features** — 3-column grid with icons and text
+Block 5: **CTA** — Primary button "Get Started"
+Block 6: **Testimonial** — Customer quote with photo
+Block 7: **Footer** — Social icons + unsubscribe + address
 
 **Do you have any images or text to upload?** Tag them by block number:
 - "Block 2 hero image" — upload your banner
@@ -166,6 +167,21 @@ Every \`<mj-section>\` MUST have an HTML comment label matching the block plan. 
 \`  <mj-text>...</mj-text>\`
 \`  <!-- hero-cta -->\`
 \`  <mj-button>...</mj-button>\`
+
+### Divider Blocks
+When the user asks for a divider, separator, or horizontal rule — create it as its own \`<mj-section>\` block with a block comment label, just like any other block. Example:
+
+\`<!-- Block 3: Divider -->\`
+\`<mj-section padding="0">\`
+\`  <mj-column>\`
+\`    <mj-divider border-width="2px" border-color="#cccccc" padding="10px 0" />\`
+\`  </mj-column>\`
+\`</mj-section>\`
+
+- The divider block is a FULL-WIDTH section, not a component inside another block
+- Use \`padding="0"\` on the section so the divider stretches edge to edge
+- Default: 2px solid #cccccc. Adjust color/thickness if the user specifies
+- When adding a divider to an existing email, insert it as a new numbered block between existing blocks and renumber subsequent blocks
 \`</mj-section>\`
 
 **Label every component** inside each block with a descriptive comment: \`hero-cta\`, \`features-col-1\`, \`footer-social\`, \`testimonial-quote\`, \`pricing-button\`, etc. This allows precise targeting during edits.
@@ -274,6 +290,13 @@ Every email you generate MUST include ALL of the following. These are non-negoti
 - Padding: consistent spacing throughout (20px sections, 10-15px inner elements)
 - ALL content must fit within the 600px container — nothing should overflow, clip, or extend beyond the email edges
 - Every text element must have sufficient padding (min 10px left/right) to prevent edge-clipping
+
+### Layout Anti-Patterns (NEVER DO THESE)
+- NEVER duplicate the same CTA button across multiple columns (e.g., two "Read More" buttons side by side) — it looks broken and confuses users. One CTA per action, always.
+- NEVER place identical content in adjacent columns — every column should have unique, meaningful content
+- In multi-column layouts (e.g., 2-col or 3-col feature grids), each column should have DIFFERENT content (different headline, different image, different CTA text/link). If the content is the same, use a single full-width column instead.
+- NEVER create a multi-column section with only buttons — buttons belong below their associated content, not in their own row of duplicates
+- If a CTA applies to the whole section, use a single full-width \`<mj-button>\` in its own \`<mj-column>\` below the multi-column content
 
 ### Text Stacking & Overlap Prevention (CRITICAL)
 - Every \`<mj-text>\` element MUST have explicit \`padding\` — minimum \`padding="10px 20px"\`

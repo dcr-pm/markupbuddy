@@ -3,7 +3,7 @@
 import { useMemo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { injectBlockLabels, type BlockMap } from "@/lib/mjml/block-labels";
-import { injectCtaHandles, setupDragListeners } from "@/lib/mjml/element-drag";
+import { injectDragHandles, setupDragListeners } from "@/lib/mjml/element-drag";
 
 export type BlockAction = {
   type: "delete" | "move-up" | "move-down";
@@ -33,7 +33,7 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
     if (showBlockLabels) {
       processed = injectBlockLabels(processed, blockMap || {}, !!onBlockAction);
       if (onElementReorder) {
-        processed = injectCtaHandles(processed);
+        processed = injectDragHandles(processed);
       }
     }
 
