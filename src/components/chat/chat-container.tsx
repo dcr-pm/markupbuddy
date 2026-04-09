@@ -85,6 +85,10 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
     setCurrentHtml(renameBlockInHtml(currentHtml, blockNumber, newName));
   }, [currentHtml, setCurrentHtml]);
 
+  const handleElementReorder = useCallback((html: string) => {
+    setCurrentHtml(html);
+  }, [setCurrentHtml]);
+
   const handleImageUpload = useCallback(async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append("file", file);
@@ -159,7 +163,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           )}
         >
           <div className="h-[50vh]">
-            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} />
+            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} />
           </div>
           <button
             onClick={() => setMobilePreviewOpen(false)}
@@ -189,7 +193,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Desktop preview panel */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} />
+        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} />
       </div>
 
       {showSendDialog && currentHtml && conversationId && (

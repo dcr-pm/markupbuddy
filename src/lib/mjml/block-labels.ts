@@ -97,7 +97,7 @@ export function injectBlockLabels(
     }
 
     const nameSpan = `<span data-block-name data-block-num="${num}" contenteditable="true" style="outline:none;cursor:text;border-bottom:1px dashed rgba(255,255,255,0.3);min-width:20px;" spellcheck="false">${name.replace(/"/g, "&quot;")}</span>`;
-    const label = `<div style="${labelStyle}">${num}: ${nameSpan}${actions}</div>`;
+    const label = `<div data-block-label="true" style="${labelStyle}">${num}: ${nameSpan}${actions}</div>`;
     result = result.replace(commentRegex, `$1\n${label}`);
   }
 

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { injectBlockLabels, type BlockMap } from "@/lib/mjml/block-labels";
+import { injectCtaHandles, setupDragListeners } from "@/lib/mjml/element-drag";
 
 export type BlockAction = {
   type: "delete" | "move-up" | "move-down";
@@ -17,9 +18,10 @@ interface PreviewFrameProps {
   showBlockLabels?: boolean;
   onBlockAction?: (action: BlockAction) => void;
   onBlockRename?: (blockNumber: number, newName: string) => void;
+  onElementReorder?: (html: string) => void;
 }
 
-export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels, onBlockAction, onBlockRename }: PreviewFrameProps) {
+export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels, onBlockAction, onBlockRename, onElementReorder }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // The iframe sandbox="allow-same-origin" (no allow-scripts) is the security
@@ -30,6 +32,9 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
     let processed = html;
     if (showBlockLabels) {
       processed = injectBlockLabels(processed, blockMap || {}, !!onBlockAction);
+      if (onElementReorder) {
+        processed = injectCtaHandles(processed);
+      }
     }
 
     if (darkMode) {
@@ -42,11 +47,13 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
       return `<html><body style="background-color: #1a1a1a; margin: 0; padding: 0;">${processed}</body></html>`;
     }
     return processed;
-  }, [html, darkMode, blockMap, showBlockLabels, onBlockAction]);
+  }, [html, darkMode, blockMap, showBlockLabels, onBlockAction, onElementReorder]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
+
+    let cleanupDrag: (() => void) | null = null;
 
     const resizeIframe = () => {
       try {
@@ -123,11 +130,23 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
             });
           });
         }
+
+        // Set up CTA drag listeners (handles are already in the HTML string)
+        if (showBlockLabels && onElementReorder) {
+          const hasHandles = doc.querySelector("[data-drag-handle]");
+          if (hasHandles) {
+            cleanupDrag = setupDragListeners(doc, onElementReorder);
+          }
+        }
       }
     } catch {
       iframe.srcdoc = wrappedHtml;
     }
-  }, [wrappedHtml, showBlockLabels, onBlockAction, onBlockRename]);
+
+    return () => {
+      if (cleanupDrag) cleanupDrag();
+    };
+  }, [wrappedHtml, showBlockLabels, onBlockAction, onBlockRename, onElementReorder]);
 
   return (
     <div

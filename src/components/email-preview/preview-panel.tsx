@@ -61,6 +61,7 @@ interface PreviewPanelProps {
   onSendTest?: () => void;
   onBlockAction?: (action: BlockAction) => void;
   onBlockRename?: (blockNumber: number, newName: string) => void;
+  onElementReorder?: (html: string) => void;
 }
 
 function QualityIndicators({
@@ -117,6 +118,7 @@ export function PreviewPanel({
   onSendTest,
   onBlockAction,
   onBlockRename,
+  onElementReorder,
 }: PreviewPanelProps) {
   const preview = usePreview();
   const [tipIndex, setTipIndex] = useState(0);
@@ -212,6 +214,7 @@ export function PreviewPanel({
           showBlockLabels={preview.showBlockLabels}
           onBlockAction={onBlockAction}
           onBlockRename={onBlockRename}
+          onElementReorder={onElementReorder}
         />
       </div>
       <QualityIndicators validation={validation ?? null} isValidating={isValidating ?? false} />
