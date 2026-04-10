@@ -43,18 +43,37 @@ export function useChat({
 
   const loadMessages = useCallback(async (convId: string) => {
     try {
+      activeConversationIdRef.current = convId;
       const res = await fetch(`/api/conversations?id=${convId}`);
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.messages || []);
-        const lastHtmlMessage = [...(data.messages || [])]
+        const allMessages: Message[] = data.messages || [];
+        setMessages(allMessages);
+
+        // Restore preview HTML from the last assistant message with html_output
+        const lastHtmlMessage = [...allMessages]
           .reverse()
-          .find((m: Message) => m.role === "assistant" && m.html_output);
-        if (lastHtmlMessage) {
+          .find((m) => m.role === "assistant" && m.html_output);
+        if (lastHtmlMessage?.html_output) {
           setCurrentHtml(lastHtmlMessage.html_output);
+        } else {
+          // Fallback: try to compile the last MJML from message content
+          for (let i = allMessages.length - 1; i >= 0; i--) {
+            const msg = allMessages[i];
+            if (msg.role === "assistant" && msg.content) {
+              const extracted = extractHtmlFromResponse(msg.content);
+              if (extracted && (/<mjml[\s>]/i.test(extracted) || /<mj-/i.test(extracted))) {
+                const compiled = await compileMjmlContent(extracted);
+                if (compiled) {
+                  setCurrentHtml(compiled);
+                  break;
+                }
+              }
+            }
+          }
         }
-        // Extract block map from any assistant message with MJML
-        const allMessages = data.messages || [];
+
+        // Extract block map from the last assistant message with MJML
         for (let i = allMessages.length - 1; i >= 0; i--) {
           const msg = allMessages[i];
           if (msg.role === "assistant" && msg.content) {
