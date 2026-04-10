@@ -61,17 +61,30 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
     return processed;
   }, [html, darkMode, blockMap, showBlockLabels, onBlockAction, handleElementReorder]);
 
+  // Keep a stable ref to the current drag cleanup so we can always tear it down
+  const cleanupDragRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
     // If this render was triggered by an in-iframe edit, skip the full rewrite
+    // but still maintain cleanup so listeners don't leak
     if (internalEditRef.current) {
       internalEditRef.current = false;
-      return;
+      return () => {
+        if (cleanupDragRef.current) {
+          cleanupDragRef.current();
+          cleanupDragRef.current = null;
+        }
+      };
     }
 
-    let cleanupDrag: (() => void) | null = null;
+    // Clean up any previous drag listeners before setting up new ones
+    if (cleanupDragRef.current) {
+      cleanupDragRef.current();
+      cleanupDragRef.current = null;
+    }
 
     const resizeIframe = () => {
       try {
@@ -153,7 +166,7 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
         if (showBlockLabels && handleElementReorder) {
           const hasHandles = doc.querySelector("[data-drag-handle]");
           if (hasHandles) {
-            cleanupDrag = setupDragListeners(doc, handleElementReorder);
+            cleanupDragRef.current = setupDragListeners(doc, handleElementReorder);
           }
         }
       }
@@ -162,7 +175,10 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
     }
 
     return () => {
-      if (cleanupDrag) cleanupDrag();
+      if (cleanupDragRef.current) {
+        cleanupDragRef.current();
+        cleanupDragRef.current = null;
+      }
     };
   }, [wrappedHtml, showBlockLabels, onBlockAction, onBlockRename, handleElementReorder]);
 

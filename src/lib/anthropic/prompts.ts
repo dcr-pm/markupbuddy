@@ -338,6 +338,25 @@ Every email you generate MUST include ALL of the following. These are non-negoti
 - Ensure all \`<mj-column>\` elements stack properly on mobile via MJML's built-in media queries (\`max-width: 100% !important\` at 480px breakpoint)
 - Test mentally: "Does this layout work at 375px wide?" — if a column has a fixed pixel width wider than 300px, it WILL overflow on mobile
 
+### Email Client Compatibility (CRITICAL — Gmail, Outlook, Apple Mail)
+**Gmail-specific rules:**
+- Gmail strips \`<style>\` blocks — ALL styling must be inline (MJML handles this, but custom \`<mj-style>\` CSS may be stripped)
+- Gmail does NOT support \`display:flex\`, \`display:grid\`, or \`position:absolute\` — use table-based layout only (MJML's default)
+- Gmail clips emails over 102KB — keep total HTML under 100KB
+- For \`<mj-social>\`: ALWAYS use \`mode="horizontal"\` and \`text-mode="false"\` — Gmail renders vertical social icons if mode is missing or set to "vertical"
+- Gmail wraps elements unpredictably if width is not explicit — always set \`width\` on \`<mj-column>\` and \`<mj-image>\`
+- Gmail Android may add extra spacing around images — use \`<mj-image>\` with explicit \`padding="0"\` when tight spacing is needed
+
+**Outlook-specific rules:**
+- Outlook uses Word rendering engine — no support for \`border-radius\`, \`background-image\` on \`<td>\`, or CSS gradients
+- MJML generates MSO conditionals automatically — do not add manual \`<!--[if mso]>\` blocks
+- Outlook ignores \`max-width\` — always set explicit pixel widths
+- \`<mj-button>\` renders as table-based VML button in Outlook — avoid complex button styling
+
+**Apple Mail / iOS rules:**
+- Apple Mail auto-links dates, addresses, and phone numbers in blue — use explicit \`<a>\` tags with your own styling to prevent this
+- iOS may auto-resize text — MJML handles this via \`-webkit-text-size-adjust:100%\`
+
 ### Code Hygiene
 - Strip all non-standard whitespace characters (narrow spaces, zero-width spaces, \`&nbsp;\` artifacts) between HTML tags — these cause invisible layout shifting in Gmail
 - Only use \`&nbsp;\` intentionally (e.g., between footer pipe separators) — never leave accidental whitespace entities
@@ -643,6 +662,9 @@ Before outputting the final MJML, mentally verify:
 8. ✓ No pure white bg (#ffffff) or pure black text (#000000) — use off-values
 9. ✓ Social icons use text-mode="false" (icon-only) with alt attributes
 10. ✓ All content fits within 600px — no overflow or clipping
+11. ✓ Social icons: mode="horizontal", text-mode="false", icon-size="24px", centered
+12. ✓ Gmail-safe: no reliance on \`<style>\` block CSS, all critical styles inline
+13. ✓ Total HTML will be under 102KB (Gmail clipping threshold)
 11. ✓ Multi-column layouts use percentage widths, not fixed pixels
 12. ✓ Text blocks use semantic HTML (\`<h1>\`, \`<h2>\`, \`<p>\`) with reset margins
 13. ✓ Language is set to \`lang="en"\`, not \`lang="und"\`

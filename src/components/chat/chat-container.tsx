@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useState, startTransition } from "react";
+import { useEffect, useCallback, useState, startTransition, useRef } from "react";
 import { useChat } from "@/hooks/use-chat";
 import { useBrands } from "@/hooks/use-brand";
 import { MessageList } from "./message-list";
@@ -54,6 +54,23 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
       toast.error(error);
     }
   }, [error]);
+
+  // Persist currentHtml to the last assistant message whenever it changes
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!currentHtml || !conversationId || isStreaming) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      fetch("/api/conversations/save-html", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId, html: currentHtml }),
+      }).catch(() => {});
+    }, 1000);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [currentHtml, conversationId, isStreaming]);
 
   // Auto-open mobile preview when HTML is first generated
   useEffect(() => {
