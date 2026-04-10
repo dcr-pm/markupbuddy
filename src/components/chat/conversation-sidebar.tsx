@@ -234,15 +234,27 @@ export function ConversationSidebar({
 
       <div className="border-t border-border p-2 space-y-0.5">
         <Link
-          href="/brands"
+          href="/chat"
           className={cn(
             "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
-            pathname === "/brands"
+            pathname.startsWith("/chat")
               ? "bg-background text-foreground shadow-sm border border-border"
               : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
           )}
         >
-          <Palette className={cn("w-4 h-4", pathname === "/brands" && "text-purple-500")} />
+          <MessageSquare className={cn("w-4 h-4", pathname.startsWith("/chat") && "text-primary")} />
+          <span className="text-xs">Chat</span>
+        </Link>
+        <Link
+          href="/brands"
+          className={cn(
+            "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
+            pathname.startsWith("/brands")
+              ? "bg-background text-foreground shadow-sm border border-border"
+              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+          )}
+        >
+          <Palette className={cn("w-4 h-4", pathname.startsWith("/brands") && "text-purple-500")} />
           <span className="text-xs">Brands</span>
         </Link>
         <Link
