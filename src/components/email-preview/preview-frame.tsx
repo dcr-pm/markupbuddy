@@ -61,26 +61,33 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
     return processed;
   }, [html, darkMode, blockMap, showBlockLabels, onBlockAction, handleElementReorder]);
 
-  // Keep a stable ref to the current drag cleanup so we can always tear it down
+  // Manage drag listener cleanup via ref — NOT via React's useEffect cleanup.
+  // React runs the previous effect's cleanup BEFORE the new effect, which would
+  // destroy listeners on internal-edit renders where we skip doc.write().
   const cleanupDragRef = useRef<(() => void) | null>(null);
+
+  // Cleanup on unmount only
+  useEffect(() => {
+    return () => {
+      if (cleanupDragRef.current) {
+        cleanupDragRef.current();
+        cleanupDragRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
     // If this render was triggered by an in-iframe edit, skip the full rewrite
-    // but still maintain cleanup so listeners don't leak
+    // to preserve scroll position, focus, and existing event listeners
     if (internalEditRef.current) {
       internalEditRef.current = false;
-      return () => {
-        if (cleanupDragRef.current) {
-          cleanupDragRef.current();
-          cleanupDragRef.current = null;
-        }
-      };
+      return;
     }
 
-    // Clean up any previous drag listeners before setting up new ones
+    // Full render: tear down previous listeners before setting up new ones
     if (cleanupDragRef.current) {
       cleanupDragRef.current();
       cleanupDragRef.current = null;
@@ -162,7 +169,7 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
           });
         }
 
-        // Set up CTA drag listeners (handles are already in the HTML string)
+        // Set up drag/edit listeners (handles are already in the HTML string)
         if (showBlockLabels && handleElementReorder) {
           const hasHandles = doc.querySelector("[data-drag-handle]");
           if (hasHandles) {
@@ -174,12 +181,7 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
       iframe.srcdoc = wrappedHtml;
     }
 
-    return () => {
-      if (cleanupDragRef.current) {
-        cleanupDragRef.current();
-        cleanupDragRef.current = null;
-      }
-    };
+    // No cleanup returned — listener lifecycle is managed via cleanupDragRef
   }, [wrappedHtml, showBlockLabels, onBlockAction, onBlockRename, handleElementReorder]);
 
   return (
