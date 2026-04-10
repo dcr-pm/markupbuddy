@@ -68,14 +68,17 @@ const TEXT_BTN_STYLE = [
   "line-height:1.4",
 ].join(";");
 
-const SWATCH_STYLE = [
-  "display:inline-block",
-  "width:12px",
-  "height:12px",
+const COLOR_INPUT_STYLE = [
+  "width:18px",
+  "height:18px",
+  "padding:0",
+  "border:1px solid rgba(255,255,255,0.5)",
   "border-radius:50%",
   "cursor:pointer",
-  "border:1px solid rgba(255,255,255,0.5)",
+  "background:transparent",
   "vertical-align:middle",
+  "-webkit-appearance:none",
+  "appearance:none",
 ].join(";");
 
 const SEPARATOR_STYLE =
@@ -83,16 +86,6 @@ const SEPARATOR_STYLE =
 
 const ROW_HIGHLIGHT =
   "outline:1px dashed rgba(99,102,241,0.3);outline-offset:-1px;";
-
-// Color palette for text and dividers
-const COLOR_PALETTE = [
-  { hex: "#000000", label: "Black" },
-  { hex: "#333333", label: "Dark" },
-  { hex: "#ffffff", label: "White" },
-  { hex: "#e74c3c", label: "Red" },
-  { hex: "#3498db", label: "Blue" },
-  { hex: "#27ae60", label: "Green" },
-];
 
 // ─── HTML string injection ───────────────────────────────────
 
@@ -119,34 +112,27 @@ function detectComponentType(afterTd: string): "text" | "divider" | "other" {
   return "other";
 }
 
-/** Build toolbar controls for a text component (font size + color). */
+/** Build toolbar controls for a text component (font size + color picker). */
 function textControls(): string {
   let c = `<span style="${SEPARATOR_STYLE}"></span>`;
   c += `<span data-font-down="true" style="${TEXT_BTN_STYLE}" title="Decrease font size">A\u2212</span>`;
   c += `<span data-font-up="true" style="${TEXT_BTN_STYLE}" title="Increase font size">A+</span>`;
   c += `<span style="${SEPARATOR_STYLE}"></span>`;
-  for (const col of COLOR_PALETTE) {
-    c += `<span data-color-pick="${col.hex}" title="${col.label}" style="${SWATCH_STYLE};background:${col.hex};"></span>`;
-  }
+  c += `<input type="color" data-text-color-picker="true" value="#000000" title="Text color" style="${COLOR_INPUT_STYLE}" />`;
   return c;
 }
 
-/** Build toolbar controls for a divider component (thickness + style + color). */
+/** Build toolbar controls for a divider component (thickness + style + color picker). */
 function dividerControls(): string {
   let c = `<span style="${SEPARATOR_STYLE}"></span>`;
-  // Thickness
   c += `<span data-div-thinner="true" style="${TEXT_BTN_STYLE}" title="Thinner">\u2212</span>`;
   c += `<span data-div-thicker="true" style="${TEXT_BTN_STYLE}" title="Thicker">+</span>`;
   c += `<span style="${SEPARATOR_STYLE}"></span>`;
-  // Border style
   c += `<span data-div-style="solid" style="${TEXT_BTN_STYLE}" title="Solid">\u2500</span>`;
   c += `<span data-div-style="dashed" style="${TEXT_BTN_STYLE}" title="Dashed">\u2504</span>`;
   c += `<span data-div-style="dotted" style="${TEXT_BTN_STYLE}" title="Dotted">\u2508</span>`;
   c += `<span style="${SEPARATOR_STYLE}"></span>`;
-  // Colors
-  for (const col of COLOR_PALETTE) {
-    c += `<span data-div-color="${col.hex}" title="${col.label}" style="${SWATCH_STYLE};background:${col.hex};"></span>`;
-  }
+  c += `<input type="color" data-div-color-picker="true" value="#000000" title="Divider color" style="${COLOR_INPUT_STYLE}" />`;
   return c;
 }
 
@@ -336,6 +322,35 @@ function setDividerColor(el: HTMLElement, color: string): void {
   );
 }
 
+/** Parse the current text color from a text div, returning a hex string. */
+function parseCurrentTextColor(el: HTMLElement): string | null {
+  const style = el.getAttribute("style") || "";
+  const match = style.match(/(?:^|;)\s*color:\s*([^;]+)/i);
+  if (!match) return null;
+  return colorToHex(match[1].trim());
+}
+
+/** Convert a CSS color value to hex format for <input type="color">. */
+function colorToHex(color: string): string | null {
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color.toLowerCase();
+  if (/^#[0-9a-f]{3}$/i.test(color)) {
+    return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`.toLowerCase();
+  }
+  const rgb = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (rgb) {
+    const r = parseInt(rgb[1]).toString(16).padStart(2, "0");
+    const g = parseInt(rgb[2]).toString(16).padStart(2, "0");
+    const b = parseInt(rgb[3]).toString(16).padStart(2, "0");
+    return `#${r}${g}${b}`;
+  }
+  // Named colors fallback
+  const named: Record<string, string> = {
+    black: "#000000", white: "#ffffff", red: "#ff0000", blue: "#0000ff",
+    green: "#008000", gray: "#808080", grey: "#808080",
+  };
+  return named[color.toLowerCase()] || null;
+}
+
 // ─── Drag + edit controller ─────────────────────────────────
 
 interface DragState {
@@ -398,19 +413,17 @@ export function setupDragListeners(
       return;
     }
 
-    // — Text color pick —
-    const colorBtn = target.closest("[data-color-pick]") as HTMLElement | null;
-    if (colorBtn) {
-      const color = colorBtn.getAttribute("data-color-pick");
-      if (!color) return;
-      const handleTr = colorBtn.closest("[data-drag-handle]") as HTMLElement | null;
+    // — Text color picker: set initial value on click —
+    const textColorInput = target.closest("[data-text-color-picker]") as HTMLInputElement | null;
+    if (textColorInput) {
+      const handleTr = textColorInput.closest("[data-drag-handle]") as HTMLElement | null;
       const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
       if (!componentRow) return;
       const textDiv = findTextDiv(componentRow);
       if (!textDiv) return;
-      me.preventDefault();
-      setTextColor(textDiv, color);
-      onReorder(serializeCleanHtml(doc));
+      // Read current color and set picker initial value
+      const currentColor = parseCurrentTextColor(textDiv);
+      if (currentColor) textColorInput.value = currentColor;
       return;
     }
 
@@ -458,19 +471,19 @@ export function setupDragListeners(
       return;
     }
 
-    // — Divider color —
-    const divColor = target.closest("[data-div-color]") as HTMLElement | null;
-    if (divColor) {
-      const color = divColor.getAttribute("data-div-color");
-      if (!color) return;
-      const handleTr = divColor.closest("[data-drag-handle]") as HTMLElement | null;
+    // — Divider color picker: set initial value on click —
+    const divColorInput = target.closest("[data-div-color-picker]") as HTMLInputElement | null;
+    if (divColorInput) {
+      const handleTr = divColorInput.closest("[data-drag-handle]") as HTMLElement | null;
       const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
       if (!componentRow) return;
       const line = findDividerLine(componentRow);
       if (!line) return;
-      me.preventDefault();
-      setDividerColor(line, color);
-      onReorder(serializeCleanHtml(doc));
+      const match = (line.getAttribute("style") || "").match(BORDER_TOP_RE);
+      if (match && match[3]) {
+        const hex = colorToHex(match[3].trim());
+        if (hex) divColorInput.value = hex;
+      }
       return;
     }
   };
@@ -478,7 +491,7 @@ export function setupDragListeners(
   // ── Drag handler ──
   const onMouseDown = (e: Event) => {
     const me = e as MouseEvent;
-    if ((me.target as HTMLElement)?.closest("[data-delete-btn],[data-font-down],[data-font-up],[data-color-pick],[data-div-thinner],[data-div-thicker],[data-div-style],[data-div-color]")) return;
+    if ((me.target as HTMLElement)?.closest("[data-delete-btn],[data-font-down],[data-font-up],[data-text-color-picker],[data-div-thinner],[data-div-thicker],[data-div-style],[data-div-color-picker]")) return;
 
     const handle = (me.target as HTMLElement)?.closest("[data-drag-handle]") as HTMLElement | null;
     if (!handle) return;
@@ -635,8 +648,40 @@ export function setupDragListeners(
     onReorder(serializeCleanHtml(doc));
   };
 
+  // ── Color picker input handler ──
+  const onColorInput = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+
+    // Text color picker
+    if (target.hasAttribute("data-text-color-picker")) {
+      const color = target.value;
+      const handleTr = target.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const textDiv = findTextDiv(componentRow);
+      if (!textDiv) return;
+      setTextColor(textDiv, color);
+      onReorder(serializeCleanHtml(doc));
+      return;
+    }
+
+    // Divider color picker
+    if (target.hasAttribute("data-div-color-picker")) {
+      const color = target.value;
+      const handleTr = target.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const line = findDividerLine(componentRow);
+      if (!line) return;
+      setDividerColor(line, color);
+      onReorder(serializeCleanHtml(doc));
+      return;
+    }
+  };
+
   doc.addEventListener("click", onClick);
   doc.addEventListener("click", onColSwap);
+  doc.addEventListener("input", onColorInput);
   doc.addEventListener("mousedown", onMouseDown);
   doc.addEventListener("mousemove", onMouseMove);
   doc.addEventListener("mouseup", onMouseUp);
@@ -644,6 +689,7 @@ export function setupDragListeners(
   return () => {
     doc.removeEventListener("click", onClick);
     doc.removeEventListener("click", onColSwap);
+    doc.removeEventListener("input", onColorInput);
     doc.removeEventListener("mousedown", onMouseDown);
     doc.removeEventListener("mousemove", onMouseMove);
     doc.removeEventListener("mouseup", onMouseUp);
