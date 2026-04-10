@@ -93,7 +93,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
   const handleSend = useCallback(
     (message: string, imageUrl?: string) => {
       const sendMatch = message.match(
-        /^send\s+(?:test|this|email|it)\s+(?:to\s+)?([^\s,]+@[^\s,]+(?:\.[^\s,]+)+)/i
+        /^s?end\s+(?:test|this|email|it|a test)?\s*(?:to\s+)?([^\s,]+@[^\s,]+(?:\.[^\s,]+)+)/i
       );
       if (sendMatch) {
         const email = sendMatch[1];

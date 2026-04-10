@@ -49,11 +49,5 @@ export async function sendTestEmail({
 }
 
 function getDomain(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  try {
-    const url = new URL(appUrl);
-    return url.hostname === "localhost" ? "resend.dev" : url.hostname;
-  } catch {
-    return "resend.dev";
-  }
+  return process.env.RESEND_DOMAIN || "admin.markupbuddy.com";
 }
