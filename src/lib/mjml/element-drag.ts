@@ -559,16 +559,95 @@ export function setupDragListeners(
     dropTarget = null;
   };
 
+  // ── Column swap buttons for multi-column blocks ──
+  const columnSwapElements: HTMLElement[] = [];
+
+  const multiColRows = doc.querySelectorAll("table[role='presentation'] > tbody > tr");
+  multiColRows.forEach((tr) => {
+    const tds = Array.from(tr.children).filter(
+      (el): el is HTMLTableCellElement =>
+        el.tagName === "TD" && /width:\s*\d/.test(el.getAttribute("style") || "")
+    );
+    if (tds.length < 2) return;
+
+    // Add swap buttons to each column
+    tds.forEach((td, idx) => {
+      const bar = doc.createElement("div");
+      bar.setAttribute("data-col-swap", "true");
+      bar.setAttribute("style", [
+        "display:flex", "justify-content:center", "gap:4px",
+        "padding:2px 0", "font-size:9px", "font-family:system-ui,sans-serif",
+        "user-select:none",
+      ].join(";"));
+
+      if (idx > 0) {
+        const left = doc.createElement("span");
+        left.setAttribute("data-col-move", "left");
+        left.setAttribute("data-col-idx", String(idx));
+        left.setAttribute("style", TEXT_BTN_STYLE + ";cursor:pointer");
+        left.textContent = "\u25C0";
+        left.title = "Move column left";
+        bar.appendChild(left);
+      }
+      if (idx < tds.length - 1) {
+        const right = doc.createElement("span");
+        right.setAttribute("data-col-move", "right");
+        right.setAttribute("data-col-idx", String(idx));
+        right.setAttribute("style", TEXT_BTN_STYLE + ";cursor:pointer");
+        right.textContent = "\u25B6";
+        right.title = "Move column right";
+        bar.appendChild(right);
+      }
+
+      td.insertBefore(bar, td.firstChild);
+      columnSwapElements.push(bar);
+    });
+  });
+
+  // Column swap click handler
+  const onColSwap = (e: Event) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest("[data-col-move]") as HTMLElement | null;
+    if (!btn) return;
+
+    const direction = btn.getAttribute("data-col-move");
+    const idx = parseInt(btn.getAttribute("data-col-idx") || "0", 10);
+    const tr = btn.closest("tr");
+    if (!tr) return;
+
+    const tds = Array.from(tr.children).filter(
+      (el): el is HTMLTableCellElement =>
+        el.tagName === "TD" && /width:\s*\d/.test(el.getAttribute("style") || "")
+    );
+
+    if (direction === "left" && idx > 0) {
+      tr.insertBefore(tds[idx], tds[idx - 1]);
+    } else if (direction === "right" && idx < tds.length - 1) {
+      tr.insertBefore(tds[idx + 1], tds[idx]);
+    }
+
+    // Rebuild column swap buttons (indices changed)
+    columnSwapElements.forEach((el) => el.remove());
+    columnSwapElements.length = 0;
+
+    e.preventDefault();
+    e.stopPropagation();
+    onReorder(serializeCleanHtml(doc));
+  };
+
   doc.addEventListener("click", onClick);
+  doc.addEventListener("click", onColSwap);
   doc.addEventListener("mousedown", onMouseDown);
   doc.addEventListener("mousemove", onMouseMove);
   doc.addEventListener("mouseup", onMouseUp);
 
   return () => {
     doc.removeEventListener("click", onClick);
+    doc.removeEventListener("click", onColSwap);
     doc.removeEventListener("mousedown", onMouseDown);
     doc.removeEventListener("mousemove", onMouseMove);
     doc.removeEventListener("mouseup", onMouseUp);
+    columnSwapElements.forEach((el) => el.remove());
   };
 }
 
@@ -579,7 +658,7 @@ export function serializeCleanHtml(doc: Document): string {
 
   // Remove injected UI elements
   clone
-    .querySelectorAll("[data-block-label],[data-drag-handle]")
+    .querySelectorAll("[data-block-label],[data-drag-handle],[data-col-swap]")
     .forEach((el) => el.remove());
 
   // Clean up draggable row attributes

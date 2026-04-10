@@ -11,7 +11,7 @@ import { SendDialog } from "@/components/test-send/send-dialog";
 import { deleteBlockFromHtml, swapBlocksInHtml, renameBlockInHtml } from "@/lib/mjml/block-labels";
 import type { BlockAction } from "@/components/email-preview/preview-frame";
 import { toast } from "sonner";
-import { Eye, EyeOff, ChevronUp } from "lucide-react";
+import { Eye, EyeOff, ChevronUp, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatContainerProps {
@@ -88,6 +88,49 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
   const handleElementReorder = useCallback((html: string) => {
     setCurrentHtml(html);
   }, [setCurrentHtml]);
+
+  // Detect "send test to email@..." or "send this to email@..." in chat
+  const handleSend = useCallback(
+    (message: string, imageUrl?: string) => {
+      const sendMatch = message.match(
+        /^send\s+(?:test|this|email|it)\s+(?:to\s+)?([^\s,]+@[^\s,]+(?:\.[^\s,]+)+)/i
+      );
+      if (sendMatch) {
+        const email = sendMatch[1];
+        if (!currentHtml) {
+          toast.error("No email to send yet. Build an email first, then try again.");
+          return;
+        }
+        if (!conversationId) {
+          toast.error("Save the conversation first before sending a test.");
+          return;
+        }
+        toast.promise(
+          fetch("/api/test-send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversationId,
+              html: currentHtml,
+              directEmail: email,
+              subject: "Test Email",
+              fromName: "MarkupBuddy",
+            }),
+          }).then(async (res) => {
+            if (!res.ok) throw new Error((await res.json()).error || "Send failed");
+          }),
+          {
+            loading: `Sending test to ${email}...`,
+            success: `Test email sent to ${email}!`,
+            error: (err) => err.message,
+          }
+        );
+        return;
+      }
+      sendMessage(message, imageUrl);
+    },
+    [currentHtml, conversationId, sendMessage]
+  );
 
   const handleImageUpload = useCallback(async (file: File): Promise<string | null> => {
     const formData = new FormData();
@@ -184,7 +227,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
         />
 
         <ChatInput
-          onSend={sendMessage}
+          onSend={handleSend}
           onImageUpload={handleImageUpload}
           isStreaming={isStreaming}
           onStop={stopStreaming}

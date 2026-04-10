@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   description:
     "Build production-ready HTML emails with AI. Just describe what you want and get pixel-perfect, ESP-ready email HTML.",
   keywords: ["email builder", "HTML email", "AI", "marketing", "ESP"],
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

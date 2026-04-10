@@ -58,6 +58,22 @@ export function useConversations() {
     [fetchConversations]
   );
 
+  const renameConversation = useCallback(
+    async (id: string, title: string) => {
+      try {
+        await fetch("/api/conversations", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, title }),
+        });
+        await fetchConversations();
+      } catch {
+        // silently fail
+      }
+    },
+    [fetchConversations]
+  );
+
   const deleteMultipleConversations = useCallback(
     async (ids: string[]) => {
       try {
@@ -78,6 +94,7 @@ export function useConversations() {
     conversations,
     loading,
     createConversation,
+    renameConversation,
     deleteConversation,
     deleteMultipleConversations,
     refetch: fetchConversations,

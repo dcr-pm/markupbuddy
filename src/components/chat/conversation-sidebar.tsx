@@ -14,9 +14,11 @@ import {
   LogOut,
   CheckSquare,
   Square,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { cn, truncate } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
@@ -28,13 +30,16 @@ interface ConversationSidebarProps {
 export function ConversationSidebar({
   userEmail,
 }: ConversationSidebarProps) {
-  const { conversations, createConversation, deleteConversation, deleteMultipleConversations } =
+  const { conversations, createConversation, renameConversation, deleteConversation, deleteMultipleConversations } =
     useConversations();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
   const handleNew = async () => {
@@ -67,6 +72,19 @@ export function ConversationSidebar({
     if (activeDeleted) router.push("/chat");
   };
 
+  const startRename = (conv: { id: string; title: string }) => {
+    setEditingId(conv.id);
+    setEditTitle(conv.title);
+    setTimeout(() => editInputRef.current?.select(), 0);
+  };
+
+  const saveRename = async () => {
+    if (editingId && editTitle.trim()) {
+      await renameConversation(editingId, editTitle.trim());
+    }
+    setEditingId(null);
+  };
+
   const exitSelectMode = () => {
     setSelectMode(false);
     setSelectedIds(new Set());
@@ -79,9 +97,8 @@ export function ConversationSidebar({
       {/* Brand header */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center text-white text-xs font-bold shadow-sm">
-            M
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.svg" alt="MarkupBuddy" width={32} height={32} className="rounded-lg shadow-sm" />
           <span className="font-semibold text-sm text-foreground">
             Markup<span className="gradient-text">Buddy</span>
           </span>
@@ -167,20 +184,48 @@ export function ConversationSidebar({
               ) : (
                 <MessageSquare className={cn("w-4 h-4 flex-shrink-0", isActive && "text-primary")} />
               )}
-              <span className="flex-1 truncate text-xs">
-                {truncate(conv.title, 28)}
-              </span>
-              {!selectMode && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteConversation(conv.id);
-                    if (isActive) router.push("/chat");
+              {editingId === conv.id ? (
+                <input
+                  ref={editInputRef}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={saveRename}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveRename();
+                    if (e.key === "Escape") setEditingId(null);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 text-xs bg-background border border-primary/30 rounded px-1.5 py-0.5 outline-none focus:border-primary"
+                />
+              ) : (
+                <span className="flex-1 truncate text-xs">
+                  {truncate(conv.title, 28)}
+                </span>
+              )}
+              {!selectMode && editingId !== conv.id && (
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRename(conv);
+                    }}
+                    className="p-1 rounded-lg hover:bg-primary/10 hover:text-primary transition"
+                    title="Rename"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversation(conv.id);
+                      if (isActive) router.push("/chat");
+                    }}
+                    className="p-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               )}
             </div>
           );

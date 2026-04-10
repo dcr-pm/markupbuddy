@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square -->
+  <rect width="40" height="40" rx="9" fill="url(#g)"/>
+
+  <!-- Envelope body -->
+  <rect x="8" y="14.5" width="24" height="16.5" rx="2.5" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="1.5"/>
+
+  <!-- Envelope flap / V -->
+  <path d="M9.5 16 L20 25 L30.5 16" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Code brackets -->
+  <path d="M14 8.5 L10.5 11.5 L14 14.5" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M26 8.5 L29.5 11.5 L26 14.5" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Slash -->
+  <line x1="21.5" y1="8" x2="18.5" y2="15" stroke="rgba(255,255,255,0.5)" stroke-width="1.3" stroke-linecap="round"/>
+</svg>

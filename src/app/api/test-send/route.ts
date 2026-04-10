@@ -17,9 +17,37 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body: SendTestRequest = await request.json();
-    const { conversationId, html, recipients, subject, fromName, replyTo, scriptingEngine } =
+    const body = await request.json();
+    const { conversationId, html, subject, fromName, replyTo, scriptingEngine, directEmail } =
       body;
+
+    // Direct email send (from chat input) — skip test user lookup
+    if (directEmail) {
+      const inlinedHtml = inlineStyles(html);
+      const result = await sendTestEmail({
+        to: directEmail,
+        subject: subject || "Test Email from MarkupBuddy",
+        html: inlinedHtml,
+        fromName,
+        replyTo,
+      });
+
+      if (!result.success) {
+        return NextResponse.json({ error: result.error || "Send failed" }, { status: 500 });
+      }
+
+      await supabase.from("test_sends").insert({
+        user_id: user.id,
+        conversation_id: conversationId,
+        recipients: [{ email: directEmail, status: "sent" }],
+        subject,
+        from_name: fromName,
+      });
+
+      return NextResponse.json({ results: [{ email: directEmail, status: "sent" }] });
+    }
+
+    const { recipients } = body as SendTestRequest;
 
     // Get test users
     const { data: testUsers } = await supabase

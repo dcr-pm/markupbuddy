@@ -23,6 +23,18 @@ interface PreviewFrameProps {
 
 export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels, onBlockAction, onBlockRename, onElementReorder }: PreviewFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  // Track when a change originated from inside the iframe (inline edit)
+  // so we can skip the full rewrite that destroys scroll position & focus
+  const internalEditRef = useRef(false);
+
+  // Wrap onElementReorder so it sets the internal-edit flag first
+  const handleElementReorder = useMemo(() => {
+    if (!onElementReorder) return undefined;
+    return (reorderedHtml: string) => {
+      internalEditRef.current = true;
+      onElementReorder(reorderedHtml);
+    };
+  }, [onElementReorder]);
 
   // The iframe sandbox="allow-same-origin" (no allow-scripts) is the security
   // boundary — it blocks all JS execution. No need for DOMPurify which was
@@ -32,7 +44,7 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
     let processed = html;
     if (showBlockLabels) {
       processed = injectBlockLabels(processed, blockMap || {}, !!onBlockAction);
-      if (onElementReorder) {
+      if (handleElementReorder) {
         processed = injectDragHandles(processed);
       }
     }
@@ -47,11 +59,17 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
       return `<html><body style="background-color: #1a1a1a; margin: 0; padding: 0;">${processed}</body></html>`;
     }
     return processed;
-  }, [html, darkMode, blockMap, showBlockLabels, onBlockAction, onElementReorder]);
+  }, [html, darkMode, blockMap, showBlockLabels, onBlockAction, handleElementReorder]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
+
+    // If this render was triggered by an in-iframe edit, skip the full rewrite
+    if (internalEditRef.current) {
+      internalEditRef.current = false;
+      return;
+    }
 
     let cleanupDrag: (() => void) | null = null;
 
@@ -132,10 +150,10 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
         }
 
         // Set up CTA drag listeners (handles are already in the HTML string)
-        if (showBlockLabels && onElementReorder) {
+        if (showBlockLabels && handleElementReorder) {
           const hasHandles = doc.querySelector("[data-drag-handle]");
           if (hasHandles) {
-            cleanupDrag = setupDragListeners(doc, onElementReorder);
+            cleanupDrag = setupDragListeners(doc, handleElementReorder);
           }
         }
       }
@@ -146,7 +164,7 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
     return () => {
       if (cleanupDrag) cleanupDrag();
     };
-  }, [wrappedHtml, showBlockLabels, onBlockAction, onBlockRename, onElementReorder]);
+  }, [wrappedHtml, showBlockLabels, onBlockAction, onBlockRename, handleElementReorder]);
 
   return (
     <div
