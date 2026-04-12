@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Send } from "lucide-react";
+import { Send, ImageIcon } from "lucide-react";
 
 interface ClarificationQuestion {
   label: string;
@@ -14,6 +14,10 @@ interface ClarificationCardProps {
   questions: ClarificationQuestion[];
   outro: string;
   onSubmit: (answers: string) => void;
+  /** Number of images selected so far (when coordinated with image prompts) */
+  pendingImageCount?: number;
+  /** Total number of image prompts to select (when coordinated with image prompts) */
+  totalImageCount?: number;
 }
 
 export function ClarificationCard({
@@ -21,6 +25,8 @@ export function ClarificationCard({
   questions,
   outro,
   onSubmit,
+  pendingImageCount,
+  totalImageCount,
 }: ClarificationCardProps) {
   const [selections, setSelections] = useState<Record<number, string>>({});
   const [customInputs, setCustomInputs] = useState<Record<number, string>>({});
@@ -128,26 +134,38 @@ export function ClarificationCard({
       ))}
 
       {!submitted && (
-        <div className="flex items-center gap-2 pt-1">
-          <button
-            onClick={handleSubmit}
-            disabled={answeredCount === 0}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all",
-              answeredCount > 0
-                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            )}
-          >
-            <Send className="w-3 h-3" />
-            Send answers ({answeredCount}/{questions.length})
-          </button>
-          <button
-            onClick={handleGoAhead}
-            className="px-4 py-2 rounded-full text-xs font-medium border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
-          >
-            Just go ahead
-          </button>
+        <div className="flex flex-col gap-2 pt-1">
+          {totalImageCount != null && totalImageCount > 0 && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <ImageIcon className="w-3 h-3" />
+              <span>
+                {pendingImageCount && pendingImageCount > 0
+                  ? `${pendingImageCount}/${totalImageCount} image${totalImageCount > 1 ? "s" : ""} selected`
+                  : `Select images below before sending (${totalImageCount} available)`}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={answeredCount === 0}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all",
+                answeredCount > 0
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+            >
+              <Send className="w-3 h-3" />
+              Send answers ({answeredCount}/{questions.length})
+            </button>
+            <button
+              onClick={handleGoAhead}
+              className="px-4 py-2 rounded-full text-xs font-medium border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+            >
+              Just go ahead
+            </button>
+          </div>
         </div>
       )}
 

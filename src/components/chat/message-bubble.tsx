@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { cn, formatDate } from "@/lib/utils";
 import type { Message } from "@/types/chat";
 import { User, Bot, Sparkles, PenTool, LayoutTemplate } from "lucide-react";
@@ -19,6 +20,24 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
   const { text, imagePrompts } = parseContent(message.content, isUser);
   const clarification = !isUser && !isStreaming ? parseClarification(message.content) : null;
   const blockPlan = !isUser && !isStreaming && !clarification ? parseBlockPlan(message.content) : null;
+
+  // When both clarification and image prompts exist, coordinate them:
+  // image selections are stored locally and bundled with clarification submit
+  const hasBothClarificationAndImages = !!clarification && imagePrompts.length > 0;
+  const [pendingImages, setPendingImages] = useState<Record<string, string>>({});
+
+  const handleImageSelectedDuringClarification = useCallback((prompt: string, url: string) => {
+    setPendingImages(prev => ({ ...prev, [prompt]: url }));
+  }, []);
+
+  const handleClarificationSubmitWithImages = useCallback((answers: string) => {
+    // Bundle clarification answers with any selected images
+    const imageParts = Object.entries(pendingImages)
+      .map(([prompt, url]) => `Use this image for "${prompt}": ${url}`)
+      .join("\n");
+    const combined = imageParts ? `${answers}\n\n${imageParts}` : answers;
+    onSendReply?.(combined);
+  }, [pendingImages, onSendReply]);
 
   // Detect if streaming content is building toward a clarification or block plan
   const streamingPhase = isStreaming && !isUser ? detectStreamingPhase(message.content) : null;
@@ -61,7 +80,9 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
               intro={clarification.intro}
               questions={clarification.questions}
               outro={clarification.outro}
-              onSubmit={(answers) => onSendReply?.(answers)}
+              onSubmit={hasBothClarificationAndImages ? handleClarificationSubmitWithImages : (answers) => onSendReply?.(answers)}
+              pendingImageCount={hasBothClarificationAndImages ? Object.keys(pendingImages).length : undefined}
+              totalImageCount={hasBothClarificationAndImages ? imagePrompts.length : undefined}
             />
           ) : blockPlan ? (
             <BlockPlanCard
@@ -90,7 +111,14 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
               <ImageOptions
                 key={`${message.id}-img-${i}`}
                 prompt={prompt}
-                onSelect={(url) => onImageSelected?.(prompt, url)}
+                onSelect={(url) => {
+                  if (hasBothClarificationAndImages) {
+                    // Store locally — will be bundled with clarification submit
+                    handleImageSelectedDuringClarification(prompt, url);
+                  } else {
+                    onImageSelected?.(prompt, url);
+                  }
+                }}
               />
             ))}
           </div>
