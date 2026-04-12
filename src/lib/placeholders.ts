@@ -17,28 +17,27 @@ export interface PlaceholderImage {
 
 const BASE = "https://placehold.co";
 
-/** Color palettes for placeholder images (bg/text hex without #) */
+/** Light, generic background colors — no text overlay */
 const COLORS = {
-  neutral: "e2e8f0/475569",
-  blue: "dbeafe/1e40af",
-  green: "dcfce7/166534",
-  purple: "f3e8ff/6b21a8",
-  orange: "ffedd5/9a3412",
-  pink: "fce7f3/9d174d",
-  dark: "1e293b/e2e8f0",
+  neutral: "f1f5f9/f1f5f9",
+  blue: "e0ecff/e0ecff",
+  green: "e6f5ec/e6f5ec",
+  purple: "f0e8ff/f0e8ff",
+  orange: "fff3e0/fff3e0",
+  pink: "fce4ec/fce4ec",
+  dark: "d6dce5/d6dce5",
 } as const;
 
 function img(
   w: number,
   h: number,
-  text: string,
+  alt: string,
   color: keyof typeof COLORS = "neutral",
 ): PlaceholderImage {
   const c = COLORS[color];
-  const encoded = encodeURIComponent(text);
   return {
-    url: `${BASE}/${w}x${h}/${c}?text=${encoded}&font=inter`,
-    alt: text,
+    url: `${BASE}/${w}x${h}/${c}`,
+    alt,
     width: w,
     height: h,
     category: "",
@@ -117,12 +116,11 @@ export const PLACEHOLDER_IMAGES = {
 export function customPlaceholder(
   width: number,
   height: number,
-  text: string,
+  _text?: string,
   color: keyof typeof COLORS = "neutral",
 ): string {
   const c = COLORS[color];
-  const encoded = encodeURIComponent(text);
-  return `${BASE}/${width}x${height}/${c}?text=${encoded}&font=inter`;
+  return `${BASE}/${width}x${height}/${c}`;
 }
 
 // ---------- Standard Placeholder HREFs ----------

@@ -503,27 +503,27 @@ For **structural edits** (adding new blocks, removing blocks, reordering blocks,
 
 ## Placeholder Images (built-in library)
 
-When the user doesn't have images ready or says "use placeholders", use these placeholder image URLs from placehold.co. They produce clean, professional-looking colored blocks with descriptive text.
+When the user doesn't have images ready or says "use placeholders", use these placeholder image URLs from placehold.co. They produce clean, light-colored generic backgrounds with NO text overlay — just a subtle color block that looks professional.
 
-**URL format:** \`https://placehold.co/{width}x{height}/{bg_hex}/{text_hex}?text={label}&font=inter\`
+**URL format:** \`https://placehold.co/{width}x{height}/{bg_hex}/{bg_hex}\` (same color for bg and text = no visible text)
 
 **Standard sizes and colors by block type:**
 
 | Block Type | Size | URL Example |
 |---|---|---|
-| Hero banner | 600×300 | \`https://placehold.co/600x300/dbeafe/1e40af?text=Hero+Banner&font=inter\` |
-| Product image | 300×300 | \`https://placehold.co/300x300/e2e8f0/475569?text=Product&font=inter\` |
-| Product thumbnail | 150×150 | \`https://placehold.co/150x150/e2e8f0/475569?text=Product&font=inter\` |
-| Feature icon | 80×80 | \`https://placehold.co/80x80/dbeafe/1e40af?text=Icon&font=inter\` |
-| Avatar/headshot | 100×100 | \`https://placehold.co/100x100/f3e8ff/6b21a8?text=Avatar&font=inter\` |
-| Logo | 200×60 | \`https://placehold.co/200x60/1e293b/e2e8f0?text=Logo&font=inter\` |
-| Content image | 600×200 | \`https://placehold.co/600x200/dcfce7/166534?text=Content+Image&font=inter\` |
-| Half-width image | 280×200 | \`https://placehold.co/280x200/dcfce7/166534?text=Content+Image&font=inter\` |
-| App store badge | 135×40 | \`https://placehold.co/135x40/1e293b/e2e8f0?text=App+Store&font=inter\` |
+| Hero banner | 600×300 | \`https://placehold.co/600x300/e0ecff/e0ecff\` |
+| Product image | 300×300 | \`https://placehold.co/300x300/f1f5f9/f1f5f9\` |
+| Product thumbnail | 150×150 | \`https://placehold.co/150x150/f1f5f9/f1f5f9\` |
+| Feature icon | 80×80 | \`https://placehold.co/80x80/e0ecff/e0ecff\` |
+| Avatar/headshot | 100×100 | \`https://placehold.co/100x100/f0e8ff/f0e8ff\` |
+| Logo | 200×60 | \`https://placehold.co/200x60/d6dce5/d6dce5\` |
+| Content image | 600×200 | \`https://placehold.co/600x200/e6f5ec/e6f5ec\` |
+| Half-width image | 280×200 | \`https://placehold.co/280x200/e6f5ec/e6f5ec\` |
+| App store badge | 135×40 | \`https://placehold.co/135x40/d6dce5/d6dce5\` |
 
 **Rules for placeholder images:**
-- Always customize the \`text\` parameter to describe the image purpose: \`text=Summer+Sale+Hero\`, \`text=Red+Running+Shoes\`, not just "Image"
-- Always include descriptive \`alt\` text matching the placeholder purpose
+- NEVER add \`?text=\` parameter — placeholders must be clean, text-free color blocks
+- Always include descriptive \`alt\` text on the \`<mj-image>\` tag (alt text is for accessibility, not visual display)
 - Use the color palette above to visually distinguish block types
 - Include a comment above each placeholder: \`<!-- Placeholder: replace with your hero banner -->\`
 
@@ -565,7 +565,7 @@ When the user hasn't provided real URLs, use these standard placeholder hrefs. N
 ## Image Generation
 You can request AI-generated images for emails. When an email needs images (hero banners, product shots, lifestyle photos, icons):
 - Use the special tag \`[GENERATE_IMAGE: description of the image]\` in your response text OUTSIDE of any HTML/MJML code block — NEVER inside an \`src\` attribute
-- **CRITICAL**: NEVER put \`[GENERATE_IMAGE: ...]\` inside MJML \`src=\` attributes — this corrupts the compiled HTML and breaks the layout. Instead, use a placehold.co URL in the MJML (e.g., \`src="https://placehold.co/600x300/EAEAEA/999999?text=Hero+Image"\`) and mention the \`[GENERATE_IMAGE]\` tag in your response text separately
+- **CRITICAL**: NEVER put \`[GENERATE_IMAGE: ...]\` inside MJML \`src=\` attributes — this corrupts the compiled HTML and breaks the layout. Instead, use a placehold.co URL in the MJML (e.g., \`src="https://placehold.co/600x300/e0ecff/e0ecff"\`) and mention the \`[GENERATE_IMAGE]\` tag in your response text separately
 - The system will generate the image and provide a URL
 - Use descriptive, specific prompts: "A flat-lay photo of coffee beans on a marble surface, warm lighting, overhead angle" — NOT "coffee image"
 - After the user selects a generated image, update the HTML with the real URL
