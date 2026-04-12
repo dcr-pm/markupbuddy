@@ -410,12 +410,13 @@ The footer is one of the most visible parts of the email. A bad footer (giant st
 </mj-section>\`
 
 **Footer rules — NEVER violate:**
+- **The footer MUST be its own \`<mj-section>\` — NEVER combine it with any other content block.** The footer is ALWAYS the very last \`<mj-section>\` before \`</mj-body>\`, completely independent from CTA sections, feature grids, or any other block. No exceptions.
 - Social icons: ALWAYS \`mode="horizontal"\`, \`align="center"\`, \`icon-size="24px"\`, \`text-mode="false"\` on EACH element
 - NEVER stack social icons vertically — they MUST be in a single horizontal row, centered
 - NEVER left-align social icons — ALWAYS center them
 - NEVER use large icon sizes (>30px) — keep them at 24px
 - All text centered, light-colored on dark backgrounds
-- Links: underlined, rgba(255,255,255,0.7) or similar light color — NEVER dark text on dark backgrounds
+- **Every \`<a>\` tag inside the footer MUST have explicit inline styles**: \`style="color: rgba(255,255,255,0.7); text-decoration: underline;"\` — Gmail strips \`<style>\` blocks, so links without inline color revert to default blue (#0000EE) which is unreadable on dark backgrounds
 - Legal text (address, copyright): smaller font (11px), slightly more transparent
 - Single \`<mj-column>\` — NEVER split footer content across multiple columns
 - Adequate padding between social icons, links, and legal text
