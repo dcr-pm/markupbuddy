@@ -125,14 +125,19 @@ function textControls(): string {
   return c;
 }
 
-/** Build toolbar controls for a CTA button (font size + text color + bg color). */
+/** Build toolbar controls for a CTA button (font size + text color + bg color + border radius). */
 function buttonControls(): string {
   let c = `<span style="${SEPARATOR_STYLE}"></span>`;
   c += `<span data-btn-font-down="true" style="${TEXT_BTN_STYLE}" title="Decrease font size">A\u2212</span>`;
   c += `<span data-btn-font-up="true" style="${TEXT_BTN_STYLE}" title="Increase font size">A+</span>`;
   c += `<span style="${SEPARATOR_STYLE}"></span>`;
+  c += `<span style="font-size:8px;color:rgba(255,255,255,0.5);font-family:system-ui,sans-serif;">txt</span>`;
   c += `<input type="color" data-btn-text-color="true" value="#ffffff" title="Text color" style="${COLOR_INPUT_STYLE}" />`;
+  c += `<span style="font-size:8px;color:rgba(255,255,255,0.5);font-family:system-ui,sans-serif;">bg</span>`;
   c += `<input type="color" data-btn-bg-color="true" value="#000000" title="Button background" style="${COLOR_INPUT_STYLE}" />`;
+  c += `<span style="${SEPARATOR_STYLE}"></span>`;
+  c += `<span data-btn-radius-down="true" style="${TEXT_BTN_STYLE}" title="Less rounded">\u25A1</span>`;
+  c += `<span data-btn-radius-up="true" style="${TEXT_BTN_STYLE}" title="More rounded">\u25CF</span>`;
   return c;
 }
 
@@ -304,6 +309,23 @@ function setTextColor(el: HTMLElement, color: string): void {
       child.setAttribute("style", childStyle.replace(/color:\s*[^;]+/i, `color:${color}`));
     }
   });
+}
+
+/** Parse border-radius from a button <a> or <td>. */
+function parseBorderRadius(el: HTMLElement): number {
+  const style = el.getAttribute("style") || "";
+  const match = style.match(/border-radius:\s*(\d+)px/i);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+/** Set border-radius on element, preserving other styles. */
+function setBorderRadius(el: HTMLElement, px: number): void {
+  const style = el.getAttribute("style") || "";
+  if (/border-radius/i.test(style)) {
+    el.setAttribute("style", style.replace(/border-radius:\s*\d+px/i, `border-radius:${px}px`));
+  } else {
+    el.setAttribute("style", style + `;border-radius:${px}px`);
+  }
 }
 
 // Border-top regex that matches solid, dashed, or dotted
@@ -511,6 +533,40 @@ export function setupDragListeners(
       return;
     }
 
+    // — Button border radius down —
+    const btnRadiusDown = target.closest("[data-btn-radius-down]") as HTMLElement | null;
+    if (btnRadiusDown) {
+      const handleTr = btnRadiusDown.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const link = findButtonLink(componentRow);
+      if (!link) return;
+      me.preventDefault();
+      const newRadius = Math.max(0, parseBorderRadius(link) - 4);
+      setBorderRadius(link, newRadius);
+      const btnTd = findButtonTd(componentRow);
+      if (btnTd) setBorderRadius(btnTd, newRadius);
+      onReorder(serializeCleanHtml(doc));
+      return;
+    }
+
+    // — Button border radius up —
+    const btnRadiusUp = target.closest("[data-btn-radius-up]") as HTMLElement | null;
+    if (btnRadiusUp) {
+      const handleTr = btnRadiusUp.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const link = findButtonLink(componentRow);
+      if (!link) return;
+      me.preventDefault();
+      const newRadius = Math.min(50, parseBorderRadius(link) + 4);
+      setBorderRadius(link, newRadius);
+      const btnTd = findButtonTd(componentRow);
+      if (btnTd) setBorderRadius(btnTd, newRadius);
+      onReorder(serializeCleanHtml(doc));
+      return;
+    }
+
     // — Divider thinner —
     const divThinner = target.closest("[data-div-thinner]") as HTMLElement | null;
     if (divThinner) {
@@ -575,7 +631,7 @@ export function setupDragListeners(
   // ── Drag handler ──
   const onMouseDown = (e: Event) => {
     const me = e as MouseEvent;
-    if ((me.target as HTMLElement)?.closest("[data-delete-btn],[data-font-down],[data-font-up],[data-text-color-picker],[data-div-thinner],[data-div-thicker],[data-div-style],[data-div-color-picker],[data-btn-font-down],[data-btn-font-up],[data-btn-text-color],[data-btn-bg-color]")) return;
+    if ((me.target as HTMLElement)?.closest("[data-delete-btn],[data-font-down],[data-font-up],[data-text-color-picker],[data-div-thinner],[data-div-thicker],[data-div-style],[data-div-color-picker],[data-btn-font-down],[data-btn-font-up],[data-btn-text-color],[data-btn-bg-color],[data-btn-radius-down],[data-btn-radius-up]")) return;
 
     const handle = (me.target as HTMLElement)?.closest("[data-drag-handle]") as HTMLElement | null;
     if (!handle) return;
