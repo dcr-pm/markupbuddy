@@ -96,7 +96,7 @@ const ROW_HIGHLIGHT =
  *  - "divider": first child is <p> with border-top (mj-divider)
  *  - "other": images, buttons, spacers, etc.
  */
-function detectComponentType(afterTd: string): "text" | "divider" | "other" {
+function detectComponentType(afterTd: string): "text" | "divider" | "button" | "other" {
   // Find the closing > of the <td> tag
   const closeIdx = afterTd.indexOf(">");
   if (closeIdx < 0) return "other";
@@ -108,6 +108,9 @@ function detectComponentType(afterTd: string): "text" | "divider" | "other" {
 
   const tag = firstTag[1].toLowerCase();
   if (tag === "p" && /border-top/i.test(content.substring(0, 300))) return "divider";
+  // MJML buttons compile to <table> with <a> inside — detect by looking for
+  // a <td> with role="presentation" containing an <a> with background in style
+  if (tag === "table" && /<a\s[^>]*style="[^"]*background:/i.test(content.substring(0, 600))) return "button";
   if (tag === "div") return "text";
   return "other";
 }
@@ -119,6 +122,17 @@ function textControls(): string {
   c += `<span data-font-up="true" style="${TEXT_BTN_STYLE}" title="Increase font size">A+</span>`;
   c += `<span style="${SEPARATOR_STYLE}"></span>`;
   c += `<input type="color" data-text-color-picker="true" value="#000000" title="Text color" style="${COLOR_INPUT_STYLE}" />`;
+  return c;
+}
+
+/** Build toolbar controls for a CTA button (font size + text color + bg color). */
+function buttonControls(): string {
+  let c = `<span style="${SEPARATOR_STYLE}"></span>`;
+  c += `<span data-btn-font-down="true" style="${TEXT_BTN_STYLE}" title="Decrease font size">A\u2212</span>`;
+  c += `<span data-btn-font-up="true" style="${TEXT_BTN_STYLE}" title="Increase font size">A+</span>`;
+  c += `<span style="${SEPARATOR_STYLE}"></span>`;
+  c += `<input type="color" data-btn-text-color="true" value="#ffffff" title="Text color" style="${COLOR_INPUT_STYLE}" />`;
+  c += `<input type="color" data-btn-bg-color="true" value="#000000" title="Button background" style="${COLOR_INPUT_STYLE}" />`;
   return c;
 }
 
@@ -165,6 +179,8 @@ export function injectDragHandles(html: string): string {
 
     if (type === "text") {
       controls += textControls();
+    } else if (type === "button") {
+      controls += buttonControls();
     } else if (type === "divider") {
       controls += dividerControls();
     }
@@ -232,6 +248,16 @@ function findTextDiv(componentRow: HTMLElement): HTMLElement | null {
     return div;
   }
   return null;
+}
+
+/** Find the CTA <a> link inside a button component row. */
+function findButtonLink(componentRow: HTMLElement): HTMLElement | null {
+  return componentRow.querySelector("a[style*='background']") as HTMLElement | null;
+}
+
+/** Find the button's wrapping <td> (holds the background color too). */
+function findButtonTd(componentRow: HTMLElement): HTMLElement | null {
+  return componentRow.querySelector("td[style*='background']") as HTMLElement | null;
 }
 
 /** Find the divider <p> inside a component row. */
@@ -427,6 +453,64 @@ export function setupDragListeners(
       return;
     }
 
+    // — Button font size down —
+    const btnFontDown = target.closest("[data-btn-font-down]") as HTMLElement | null;
+    if (btnFontDown) {
+      const handleTr = btnFontDown.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const link = findButtonLink(componentRow);
+      if (!link) return;
+      me.preventDefault();
+      setFontSize(link, Math.max(10, parseFontSize(link) - 2));
+      onReorder(serializeCleanHtml(doc));
+      return;
+    }
+
+    // — Button font size up —
+    const btnFontUp = target.closest("[data-btn-font-up]") as HTMLElement | null;
+    if (btnFontUp) {
+      const handleTr = btnFontUp.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const link = findButtonLink(componentRow);
+      if (!link) return;
+      me.preventDefault();
+      setFontSize(link, Math.min(72, parseFontSize(link) + 2));
+      onReorder(serializeCleanHtml(doc));
+      return;
+    }
+
+    // — Button text color picker: set initial value on click —
+    const btnTextColorInput = target.closest("[data-btn-text-color]") as HTMLInputElement | null;
+    if (btnTextColorInput) {
+      const handleTr = btnTextColorInput.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const link = findButtonLink(componentRow);
+      if (!link) return;
+      const currentColor = parseCurrentTextColor(link);
+      if (currentColor) btnTextColorInput.value = currentColor;
+      return;
+    }
+
+    // — Button bg color picker: set initial value on click —
+    const btnBgColorInput = target.closest("[data-btn-bg-color]") as HTMLInputElement | null;
+    if (btnBgColorInput) {
+      const handleTr = btnBgColorInput.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const link = findButtonLink(componentRow);
+      if (!link) return;
+      const style = link.getAttribute("style") || "";
+      const bgMatch = style.match(/background:\s*([^;]+)/i);
+      if (bgMatch) {
+        const hex = colorToHex(bgMatch[1].trim());
+        if (hex) btnBgColorInput.value = hex;
+      }
+      return;
+    }
+
     // — Divider thinner —
     const divThinner = target.closest("[data-div-thinner]") as HTMLElement | null;
     if (divThinner) {
@@ -491,7 +575,7 @@ export function setupDragListeners(
   // ── Drag handler ──
   const onMouseDown = (e: Event) => {
     const me = e as MouseEvent;
-    if ((me.target as HTMLElement)?.closest("[data-delete-btn],[data-font-down],[data-font-up],[data-text-color-picker],[data-div-thinner],[data-div-thicker],[data-div-style],[data-div-color-picker]")) return;
+    if ((me.target as HTMLElement)?.closest("[data-delete-btn],[data-font-down],[data-font-up],[data-text-color-picker],[data-div-thinner],[data-div-thicker],[data-div-style],[data-div-color-picker],[data-btn-font-down],[data-btn-font-up],[data-btn-text-color],[data-btn-bg-color]")) return;
 
     const handle = (me.target as HTMLElement)?.closest("[data-drag-handle]") as HTMLElement | null;
     if (!handle) return;
@@ -674,6 +758,40 @@ export function setupDragListeners(
       const line = findDividerLine(componentRow);
       if (!line) return;
       setDividerColor(line, color);
+      onReorder(serializeCleanHtml(doc));
+      return;
+    }
+
+    // Button text color picker
+    if (target.hasAttribute("data-btn-text-color")) {
+      const color = target.value;
+      const handleTr = target.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const link = findButtonLink(componentRow);
+      if (!link) return;
+      setTextColor(link, color);
+      onReorder(serializeCleanHtml(doc));
+      return;
+    }
+
+    // Button background color picker
+    if (target.hasAttribute("data-btn-bg-color")) {
+      const color = target.value;
+      const handleTr = target.closest("[data-drag-handle]") as HTMLElement | null;
+      const componentRow = handleTr?.nextElementSibling as HTMLElement | null;
+      if (!componentRow) return;
+      const link = findButtonLink(componentRow);
+      if (!link) return;
+      // Update background on the <a> tag
+      const style = link.getAttribute("style") || "";
+      link.setAttribute("style", style.replace(/background:\s*[^;]+/i, `background:${color}`));
+      // Also update the wrapping <td> which has a matching background
+      const btnTd = findButtonTd(componentRow);
+      if (btnTd) {
+        const tdStyle = btnTd.getAttribute("style") || "";
+        btnTd.setAttribute("style", tdStyle.replace(/background:\s*[^;]+/i, `background:${color}`));
+      }
       onReorder(serializeCleanHtml(doc));
       return;
     }
