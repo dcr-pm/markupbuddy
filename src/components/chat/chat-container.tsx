@@ -106,6 +106,13 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
     setCurrentHtml(html);
   }, [setCurrentHtml]);
 
+  const handleRefreshPreview = useCallback(() => {
+    if (conversationId) {
+      loadMessages(conversationId);
+      toast.info("Reloading preview...");
+    }
+  }, [conversationId, loadMessages]);
+
   // Detect "send test to email@..." or "send this to email@..." in chat
   const handleSend = useCallback(
     (message: string, imageUrl?: string) => {
@@ -223,7 +230,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           )}
         >
           <div className="h-[50vh]">
-            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} />
+            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
           </div>
           <button
             onClick={() => setMobilePreviewOpen(false)}
@@ -253,7 +260,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Desktop preview panel */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} />
+        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
       </div>
 
       {showSendDialog && currentHtml && conversationId && (

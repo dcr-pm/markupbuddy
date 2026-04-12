@@ -4,7 +4,7 @@ import { useState, useEffect, startTransition } from "react";
 import { PreviewFrame, type BlockAction } from "./preview-frame";
 import { PreviewToolbar } from "./preview-toolbar";
 import { usePreview } from "@/hooks/use-preview";
-import { Mail, Lightbulb, Check, AlertTriangle, Loader2 } from "lucide-react";
+import { Mail, Lightbulb, Check, AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ValidationResult } from "@/types/chat";
 import type { BlockMap } from "@/lib/mjml/block-labels";
@@ -62,6 +62,7 @@ interface PreviewPanelProps {
   onBlockAction?: (action: BlockAction) => void;
   onBlockRename?: (blockNumber: number, newName: string) => void;
   onElementReorder?: (html: string) => void;
+  onRefreshPreview?: () => void;
 }
 
 function QualityIndicators({
@@ -119,6 +120,7 @@ export function PreviewPanel({
   onBlockAction,
   onBlockRename,
   onElementReorder,
+  onRefreshPreview,
 }: PreviewPanelProps) {
   const preview = usePreview();
   const [tipIndex, setTipIndex] = useState(0);
@@ -187,6 +189,15 @@ export function PreviewPanel({
           <p className="text-xs text-muted-foreground mt-1">
             Your email will appear here as it&apos;s built
           </p>
+          {onRefreshPreview && (
+            <button
+              onClick={onRefreshPreview}
+              className="mt-4 flex items-center gap-1.5 mx-auto px-4 py-2 rounded-full text-xs font-medium border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Reload preview
+            </button>
+          )}
         </div>
       </div>
     );
