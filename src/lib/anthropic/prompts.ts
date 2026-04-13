@@ -749,6 +749,20 @@ export function buildSystemPrompt(brandContext?: BrandContext | null): string {
       prompt += `\n- Footer HTML (include at bottom of every email):\n\`\`\`html\n${brandContext.footer_html}\n\`\`\``;
     if (brandContext.guidelines_url)
       prompt += `\n- Brand Guidelines Document: ${brandContext.guidelines_url} (reference this for design decisions)`;
+    // Add mandatory color usage directive when brand colors are set
+    const hasColors = brandContext.primary_color || brandContext.secondary_color || brandContext.accent_color;
+    if (hasColors) {
+      prompt += "\n\n**MANDATORY COLOR USAGE** — Use these exact brand colors in every email:";
+      if (brandContext.primary_color)
+        prompt += `\n- Primary (${brandContext.primary_color}): CTA buttons, key headings, and accent elements`;
+      if (brandContext.secondary_color)
+        prompt += `\n- Secondary (${brandContext.secondary_color}): Secondary buttons, borders, and supporting elements`;
+      if (brandContext.accent_color)
+        prompt += `\n- Accent (${brandContext.accent_color}): Highlights, badges, and small accent details`;
+      prompt += "\n- Do NOT invent new colors or use generic blues/grays/purples when these brand colors are set.";
+      prompt += "\n- Every CTA button MUST use the primary color as its background.";
+    }
+
     prompt +=
       "\n\nApply this brand to every email you generate unless the user explicitly says otherwise.";
 

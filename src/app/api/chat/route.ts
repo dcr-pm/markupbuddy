@@ -9,6 +9,7 @@ import {
   isPartialBlockEdit,
   extractBlocksFromPartial,
   spliceBlocks,
+  wrapPartialAsFullMjml,
 } from "@/lib/mjml/blocks";
 import {
   validateEmail,
@@ -117,8 +118,15 @@ function createValidatedStream(
         console.log("[chat] Detected partial block edit — splicing into last full MJML");
         const updatedBlocks = extractBlocksFromPartial(rawExtracted);
         if (updatedBlocks.length > 0) {
-          rawExtracted = spliceBlocks(lastFullMjml, updatedBlocks);
-          console.log(`[chat] Spliced ${updatedBlocks.length} block(s): ${updatedBlocks.map((b) => `Block ${b.number}`).join(", ")}`);
+          const spliced = spliceBlocks(lastFullMjml, updatedBlocks);
+          if (spliced !== lastFullMjml) {
+            rawExtracted = spliced;
+            console.log(`[chat] Spliced ${updatedBlocks.length} block(s): ${updatedBlocks.map((b) => `Block ${b.number}`).join(", ")}`);
+          } else {
+            // Splice had no effect — fall back to wrapping partial as standalone MJML
+            console.warn("[chat] Splice had no effect — wrapping partial as standalone MJML");
+            rawExtracted = wrapPartialAsFullMjml(rawExtracted);
+          }
         }
       }
 

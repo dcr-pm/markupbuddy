@@ -319,6 +319,187 @@ function checkLayout(mjml: string): ValidationIssue[] {
 }
 
 /**
+ * Check that multi-column sections have balanced content.
+ * Each column in a grid should have the same number and type of child elements.
+ */
+function checkColumnBalance(mjml: string): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  // Find sections with multiple columns
+  const sectionRegex =
+    /<!--\s*Block\s+(\d+)\s*:[^>]*-->\s*<mj-section[^>]*>([\s\S]*?)<\/mj-section>/gi;
+  let match;
+  while ((match = sectionRegex.exec(mjml)) !== null) {
+    const blockNum = match[1];
+    const sectionContent = match[2];
+
+    // Extract columns
+    const columns: string[] = [];
+    const colRegex = /<mj-column[^>]*>([\s\S]*?)<\/mj-column>/gi;
+    let colMatch;
+    while ((colMatch = colRegex.exec(sectionContent)) !== null) {
+      columns.push(colMatch[1]);
+    }
+
+    // Only check sections with 2+ columns
+    if (columns.length < 2) continue;
+
+    // Count child elements in each column
+    const elementCounts = columns.map((col) => {
+      const elements = col.match(/<mj-(text|image|button|divider|spacer|social)\b/gi);
+      return elements ? elements.length : 0;
+    });
+
+    const maxCount = Math.max(...elementCounts);
+    const minCount = Math.min(...elementCounts);
+
+    if (maxCount - minCount > 1) {
+      issues.push({
+        type: "layout",
+        severity: "error",
+        message: `Block ${blockNum}: columns are unbalanced (${elementCounts.join(", ")} elements). Each column in a ${columns.length}-column grid must have the same number and type of elements.`,
+      });
+    }
+  }
+
+  // Also check sections without block comments (fallback)
+  const plainSectionRegex =
+    /<mj-section[^>]*>([\s\S]*?)<\/mj-section>/gi;
+  let plainMatch;
+  const checkedRanges: Array<[number, number]> = [];
+  // Track ranges already covered by block-comment sections
+  sectionRegex.lastIndex = 0;
+  while ((match = sectionRegex.exec(mjml)) !== null) {
+    checkedRanges.push([match.index, match.index + match[0].length]);
+  }
+
+  while ((plainMatch = plainSectionRegex.exec(mjml)) !== null) {
+    // Skip if already checked via block comment path
+    const pos = plainMatch.index;
+    if (checkedRanges.some(([s, e]) => pos >= s && pos < e)) continue;
+
+    const sectionContent = plainMatch[1];
+    const columns: string[] = [];
+    const colRegex2 = /<mj-column[^>]*>([\s\S]*?)<\/mj-column>/gi;
+    let colMatch2;
+    while ((colMatch2 = colRegex2.exec(sectionContent)) !== null) {
+      columns.push(colMatch2[1]);
+    }
+
+    if (columns.length < 2) continue;
+
+    const elementCounts = columns.map((col) => {
+      const elements = col.match(/<mj-(text|image|button|divider|spacer|social)\b/gi);
+      return elements ? elements.length : 0;
+    });
+
+    const maxCount = Math.max(...elementCounts);
+    const minCount = Math.min(...elementCounts);
+
+    if (maxCount - minCount > 1) {
+      issues.push({
+        type: "layout",
+        severity: "error",
+        message: `Multi-column section has unbalanced columns (${elementCounts.join(", ")} elements). Each column must have the same number of elements.`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Check for duplicate CTA buttons within the same section.
+ * Multiple buttons with identical text in a grid look broken.
+ */
+function checkDuplicateCTAs(mjml: string): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  const sectionRegex =
+    /(?:<!--\s*Block\s+(\d+)\s*:[^>]*-->\s*)?<mj-section[^>]*>([\s\S]*?)<\/mj-section>/gi;
+  let match;
+  while ((match = sectionRegex.exec(mjml)) !== null) {
+    const blockNum = match[1] || "?";
+    const content = match[2];
+
+    // Only check multi-column sections
+    const colCount = (content.match(/<mj-column\b/gi) || []).length;
+    if (colCount < 2) continue;
+
+    // Extract button text
+    const buttonTexts: string[] = [];
+    const btnRegex = /<mj-button[^>]*>([\s\S]*?)<\/mj-button>/gi;
+    let btnMatch;
+    while ((btnMatch = btnRegex.exec(content)) !== null) {
+      const text = btnMatch[1].replace(/<[^>]+>/g, "").trim().toLowerCase();
+      if (text) buttonTexts.push(text);
+    }
+
+    // Find duplicates
+    const seen = new Set<string>();
+    const dupes = new Set<string>();
+    for (const t of buttonTexts) {
+      if (seen.has(t)) dupes.add(t);
+      seen.add(t);
+    }
+
+    if (dupes.size > 0) {
+      issues.push({
+        type: "layout",
+        severity: "error",
+        message: `Block ${blockNum}: duplicate CTA buttons with text "${[...dupes].join('", "')}" across columns. Each column should have unique CTA text, or use a single full-width button below the grid.`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Verify the footer is the last section before </mj-body>.
+ * Footer content inside other sections breaks the layout.
+ */
+function checkFooterPlacement(mjml: string): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  // Find block comments that mention "footer"
+  const footerBlockRegex = /<!--\s*Block\s+(\d+)\s*:\s*([^-]*footer[^-]*?)-->/gi;
+  let footerMatch;
+  const footerBlocks: Array<{ number: number; index: number }> = [];
+
+  while ((footerMatch = footerBlockRegex.exec(mjml)) !== null) {
+    footerBlocks.push({
+      number: parseInt(footerMatch[1]),
+      index: footerMatch.index,
+    });
+  }
+
+  if (footerBlocks.length === 0) return issues; // No labeled footer
+
+  // The footer should be the last block
+  const lastFooter = footerBlocks[footerBlocks.length - 1];
+  const afterFooter = mjml.slice(lastFooter.index);
+
+  // Check if there's another non-footer section after the footer
+  const sectionsAfter = afterFooter.match(/<!--\s*Block\s+(\d+)\s*:\s*([^-]*?)-->/gi);
+  if (sectionsAfter && sectionsAfter.length > 1) {
+    // More than 1 means there are blocks after the footer block
+    const nonFooterAfter = sectionsAfter.filter(
+      (s) => !/footer/i.test(s) && s !== sectionsAfter[0]
+    );
+    if (nonFooterAfter.length > 0) {
+      issues.push({
+        type: "layout",
+        severity: "error",
+        message: `Footer (Block ${lastFooter.number}) is not the last section. Content blocks appear after the footer, which breaks the email layout.`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+/**
  * Run all validators on MJML source and compiled HTML.
  * Returns a structured result with individual check outcomes.
  */
@@ -336,7 +517,12 @@ export function validateEmail(
   const altTextIssues = auditAltText(mjml);
   const sizeIssues = checkEmailSize(compiledHtml);
   const linkIssues = auditLinks(mjml);
-  const layoutIssues = checkLayout(mjml);
+  const layoutIssues = [
+    ...checkLayout(mjml),
+    ...checkColumnBalance(mjml),
+    ...checkDuplicateCTAs(mjml),
+    ...checkFooterPlacement(mjml),
+  ];
 
   allIssues.push(...contrastIssues, ...altTextIssues, ...sizeIssues, ...linkIssues, ...layoutIssues);
 
@@ -394,20 +580,60 @@ export function validateEmail(
 
 /**
  * Check if validation issues are worth retrying with the LLM.
- * Only retries for compile errors and contrast errors — not warnings.
+ * Retries for errors (compile, contrast, layout) AND fixable warnings (alt_text, links).
  */
 export function shouldRetry(issues: ValidationIssue[]): boolean {
   return issues.some(
-    (i) => i.severity === "error" && (i.type === "compile" || i.type === "contrast" || i.type === "layout")
+    (i) =>
+      (i.severity === "error" && (i.type === "compile" || i.type === "contrast" || i.type === "layout")) ||
+      (i.type === "alt_text" || i.type === "links")
   );
 }
 
+/** Fix instruction hints for each issue type */
+const FIX_HINTS: Record<string, string> = {
+  contrast:
+    "Fix: Change the text color to #FFFFFF (or a light color) if the background is dark, or lighten the background if the text is dark. Ensure a contrast ratio of at least 4.5:1.",
+  layout_balance:
+    "Fix: Ensure every column in this section has the exact same number and type of elements. If column 1 has image+text+button, ALL other columns must also have image+text+button.",
+  layout_duplicate_cta:
+    "Fix: Give each column a unique CTA button text (e.g., 'Shop Shoes', 'Shop Bags'), or remove duplicate buttons and use a single full-width <mj-button> below the multi-column section.",
+  layout_footer:
+    "Fix: Move the footer to be the very last <mj-section> before </mj-body>. The footer must be its own independent section — never combined with other content.",
+  layout_overlap:
+    "Fix: Remove <mj-image> from any section that uses background-url. Use background-url for background images OR <mj-image> for inline images, never both.",
+  layout_social:
+    'Fix: Add mode="horizontal" align="center" icon-size="24px" to <mj-social>, and text-mode="false" to each <mj-social-element>.',
+  alt_text:
+    'Fix: Add a descriptive alt attribute to each image. Example: alt="Woman wearing red summer dress - $49.99". Never use generic text like "image" or "icon".',
+  links:
+    'Fix: Replace href="#" with a meaningful placeholder URL like https://example.com/action. Use https:// instead of http://. Replace "click here" with descriptive action text.',
+};
+
 /**
- * Format issues into a concise message for the LLM correction prompt.
+ * Format issues with actionable fix instructions for the LLM correction prompt.
  */
 export function formatIssuesForLLM(issues: ValidationIssue[]): string {
-  return issues
-    .filter((i) => i.severity === "error")
-    .map((i) => `- [${i.type.toUpperCase()}] ${i.message}`)
+  const retryable = issues.filter(
+    (i) =>
+      i.severity === "error" ||
+      i.type === "alt_text" ||
+      i.type === "links"
+  );
+
+  return retryable
+    .map((i) => {
+      let hint = "";
+      if (i.type === "contrast") hint = FIX_HINTS.contrast;
+      else if (i.type === "layout" && /unbalanced|balance/i.test(i.message)) hint = FIX_HINTS.layout_balance;
+      else if (i.type === "layout" && /duplicate.*cta/i.test(i.message)) hint = FIX_HINTS.layout_duplicate_cta;
+      else if (i.type === "layout" && /footer/i.test(i.message)) hint = FIX_HINTS.layout_footer;
+      else if (i.type === "layout" && /overlap|background-url/i.test(i.message)) hint = FIX_HINTS.layout_overlap;
+      else if (i.type === "layout" && /social/i.test(i.message)) hint = FIX_HINTS.layout_social;
+      else if (i.type === "alt_text") hint = FIX_HINTS.alt_text;
+      else if (i.type === "links") hint = FIX_HINTS.links;
+
+      return `- [${i.type.toUpperCase()}] ${i.message}${hint ? `\n  ${hint}` : ""}`;
+    })
     .join("\n");
 }

@@ -17,10 +17,13 @@ interface ParsedBlock {
 export function isPartialBlockEdit(content: string): boolean {
   if (/<mjml[\s>]/i.test(content)) return false;
   return (
-    /<!--\s*Block\s+\d+\s*:/i.test(content) &&
+    BLOCK_COMMENT_REGEX.test(content) &&
     /<mj-section[\s>]/i.test(content)
   );
 }
+
+// Permissive block comment regex — allows missing colons, variable whitespace, optional trailing text
+const BLOCK_COMMENT_REGEX = /<!--\s*Block\s+(\d+)\s*[:\-—]?\s*([^-]*?)-->/gi;
 
 /**
  * Extract blocks from a partial edit response.
@@ -28,9 +31,8 @@ export function isPartialBlockEdit(content: string): boolean {
  */
 export function extractBlocksFromPartial(content: string): ParsedBlock[] {
   const blocks: ParsedBlock[] = [];
-  const blockStarts = [
-    ...content.matchAll(/<!--\s*Block\s+(\d+)\s*:\s*([^-]+?)-->/gi),
-  ];
+  const regex = new RegExp(BLOCK_COMMENT_REGEX.source, "gi");
+  const blockStarts = [...content.matchAll(regex)];
 
   for (let i = 0; i < blockStarts.length; i++) {
     const match = blockStarts[i];
@@ -48,13 +50,21 @@ export function extractBlocksFromPartial(content: string): ParsedBlock[] {
     if (/<mj-section[\s>]/i.test(blockContent)) {
       blocks.push({
         number: parseInt(match[1]),
-        name: match[2].trim(),
+        name: (match[2] || "").trim(),
         content: blockContent,
       });
     }
   }
 
   return blocks;
+}
+
+/**
+ * Wrap a partial block edit in a full MJML document for standalone compilation.
+ * Used as a fallback when splicing into existing MJML fails.
+ */
+export function wrapPartialAsFullMjml(partial: string): string {
+  return `<mjml>\n<mj-body>\n${partial.trim()}\n</mj-body>\n</mjml>`;
 }
 
 /**
@@ -67,9 +77,17 @@ export function spliceBlocks(
   updatedBlocks: ParsedBlock[]
 ): string {
   let result = fullMjml;
+  let anyReplaced = false;
 
   for (const block of updatedBlocks) {
-    result = replaceBlock(result, block.number, block.content);
+    const before = result;
+    result = replaceBlock(result, block.number, block.content, block.name);
+    if (result !== before) anyReplaced = true;
+  }
+
+  // If no blocks were replaced, log a warning — caller may need to fall back
+  if (!anyReplaced && updatedBlocks.length > 0) {
+    console.warn("[blocks] spliceBlocks: no blocks matched — splice had no effect");
   }
 
   return result;
@@ -78,21 +96,36 @@ export function spliceBlocks(
 function replaceBlock(
   mjml: string,
   blockNumber: number,
-  newContent: string
+  newContent: string,
+  blockName?: string
 ): string {
-  // Find the start of this block: <!-- Block N: ... -->
-  const startRegex = new RegExp(
-    `<!--\\s*Block\\s+${blockNumber}\\s*:[^>]*-->`,
+  // Try to find by block number first (permissive: colon optional)
+  let startRegex = new RegExp(
+    `<!--\\s*Block\\s+${blockNumber}\\s*[:\\-—]?[^>]*-->`,
     "i"
   );
-  const startMatch = startRegex.exec(mjml);
+  let startMatch = startRegex.exec(mjml);
+
+  // Fallback: try matching by block name (case-insensitive substring)
+  if (!startMatch && blockName) {
+    const escapedName = blockName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const nameRegex = new RegExp(
+      `<!--\\s*Block\\s+\\d+\\s*[:\\-—]?\\s*[^-]*${escapedName}[^-]*-->`,
+      "i"
+    );
+    startMatch = nameRegex.exec(mjml);
+    if (startMatch) {
+      console.log(`[blocks] Block ${blockNumber} not found by number, matched by name "${blockName}"`);
+    }
+  }
+
   if (!startMatch) return mjml; // Block not found, return unchanged
 
   const startPos = startMatch.index;
 
-  // Find the end: next <!-- Block N+M --> or </mj-body>
+  // Find the end: next block comment or </mj-body>
   const afterStart = mjml.slice(startPos + startMatch[0].length);
-  const nextBlockMatch = afterStart.match(/<!--\s*Block\s+\d+\s*:/i);
+  const nextBlockMatch = afterStart.match(/<!--\s*Block\s+\d+\s*[:\-—]?/i);
   const bodyCloseMatch = afterStart.match(/<\/mj-body>/i);
 
   let endOffset: number;
