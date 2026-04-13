@@ -16,7 +16,10 @@ export async function compileMjml(mjmlSource: string): Promise<CompileResult> {
       mjml2htmlCached = (await import("mjml")).default;
     }
 
-    const result = mjml2htmlCached!(mjmlSource, {
+    // Pre-process: auto-fix common MJML mistakes before compilation
+    const fixedSource = fixSocialIcons(mjmlSource);
+
+    const result = mjml2htmlCached!(fixedSource, {
       validationLevel: "soft",
       minify: false,
     });
@@ -44,6 +47,39 @@ export async function compileMjml(mjmlSource: string): Promise<CompileResult> {
  */
 export function isMjml(content: string): boolean {
   return /<mjml[\s>]/i.test(content) || /<mj-/i.test(content);
+}
+
+/**
+ * Pre-process MJML source to fix common social icon mistakes.
+ * Ensures <mj-social> has mode="horizontal" and align="center",
+ * and <mj-social-element> has text-mode="false".
+ * This runs before compilation so the output is always correct.
+ */
+function fixSocialIcons(mjml: string): string {
+  // Fix <mj-social-element> missing text-mode="false" (must run BEFORE mj-social fix)
+  let result = mjml.replace(/<mj-social-element\b([^>]*)>/gi, (full, attrs: string) => {
+    if (!/text-mode="/i.test(attrs)) {
+      return `<mj-social-element${attrs} text-mode="false">`;
+    }
+    return full;
+  });
+
+  // Fix <mj-social> (but NOT mj-social-element) missing mode="horizontal"
+  result = result.replace(/<mj-social(?!-element)\b([^>]*)>/gi, (full, attrs: string) => {
+    let fixed = attrs;
+    if (!/mode="/i.test(fixed)) {
+      fixed += ' mode="horizontal"';
+    }
+    if (!/align="/i.test(fixed)) {
+      fixed += ' align="center"';
+    }
+    if (!/icon-size="/i.test(fixed)) {
+      fixed += ' icon-size="24px"';
+    }
+    return `<mj-social${fixed}>`;
+  });
+
+  return result;
 }
 
 /**
