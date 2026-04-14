@@ -3,19 +3,23 @@
 import { useState, useCallback } from "react";
 import { cn, formatDate } from "@/lib/utils";
 import type { Message } from "@/types/chat";
-import { User, Bot, Sparkles, PenTool, LayoutTemplate } from "lucide-react";
+import type { StreamPhase } from "@/hooks/use-chat";
+import { User, Bot, Sparkles, PenTool, LayoutTemplate, RefreshCw } from "lucide-react";
 import { ImageOptions } from "./image-options";
 import { ClarificationCard, parseClarification } from "./clarification-card";
 import { BlockPlanCard, parseBlockPlan } from "./block-plan-card";
+import { StreamingIndicator } from "./streaming-indicator";
 
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
+  streamPhase?: StreamPhase;
   onImageSelected?: (prompt: string, url: string) => void;
   onSendReply?: (text: string) => void;
+  onRetry?: () => void;
 }
 
-export function MessageBubble({ message, isStreaming, onImageSelected, onSendReply }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming, streamPhase, onImageSelected, onSendReply, onRetry }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const { text, imagePrompts } = parseContent(message.content, isUser);
   const clarification = !isUser && !isStreaming ? parseClarification(message.content) : null;
@@ -97,13 +101,20 @@ export function MessageBubble({ message, isStreaming, onImageSelected, onSendRep
             <div className="whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }} />
           )}
           {isStreaming && !message.content && (
-            <span className="inline-flex gap-1">
-              <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" />
-              <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0.1s]" />
-              <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0.2s]" />
-            </span>
+            <StreamingIndicator phase={streamPhase} />
           )}
         </div>
+
+        {/* Retry button when AI returned empty */}
+        {onRetry && !isStreaming && (
+          <button
+            onClick={onRetry}
+            className="flex items-center gap-1.5 px-3 py-1.5 mt-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground border border-border hover:border-primary/30 transition-all"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Try again
+          </button>
+        )}
 
         {imagePrompts.length > 0 && !isStreaming && (
           <div className="w-full">

@@ -54,6 +54,7 @@ const EMAIL_TIPS = [
 
 interface PreviewPanelProps {
   html: string | null;
+  mjml?: string | null;
   isStreaming?: boolean;
   isValidating?: boolean;
   validation?: ValidationResult | null;
@@ -65,6 +66,16 @@ interface PreviewPanelProps {
   onRefreshPreview?: () => void;
 }
 
+/** User-friendly descriptions for failed checks */
+const FRIENDLY_DETAILS: Record<string, string> = {
+  Contrast: "Some text may be hard to read on its background",
+  "Alt text": "Images need better descriptions for accessibility",
+  Size: "Email is large — may get clipped in Gmail",
+  Links: "Some links need valid URLs",
+  Layout: "Layout structure has issues that may break rendering",
+  Compiled: "Email failed to compile — check the code",
+};
+
 function QualityIndicators({
   validation,
   isValidating,
@@ -73,38 +84,57 @@ function QualityIndicators({
   isValidating: boolean;
 }) {
   if (!validation && !isValidating) return null;
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 border-t border-border bg-surface/50">
-      {isValidating && !validation && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Loader2 className="w-3 h-3 animate-spin" />
-          <span>Checking quality...</span>
+    <div className="border-t border-border bg-surface/50">
+      <div className="flex items-center gap-3 px-4 py-2">
+        {isValidating && !validation && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span>Checking quality...</span>
+          </div>
+        )}
+        {validation && (
+          <>
+            {validation.checks.map((check) => (
+              <button
+                key={check.name}
+                onClick={() => setExpanded(expanded === check.name ? null : check.name)}
+                className={cn(
+                  "flex items-center gap-1 text-[11px] font-medium cursor-pointer hover:opacity-80 transition",
+                  check.passed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+                )}
+                title={check.detail}
+              >
+                {check.passed ? (
+                  <Check className="w-3 h-3" />
+                ) : (
+                  <AlertTriangle className="w-3 h-3" />
+                )}
+                <span>{check.name}</span>
+                {check.detail && check.name === "Size" && (
+                  <span className="text-muted-foreground font-normal">({check.detail})</span>
+                )}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+      {expanded && validation && (
+        <div className="px-4 pb-2">
+          {(() => {
+            const check = validation.checks.find(c => c.name === expanded);
+            if (!check) return null;
+            return (
+              <p className="text-[11px] text-muted-foreground">
+                {check.passed
+                  ? check.detail || "Passed"
+                  : FRIENDLY_DETAILS[check.name] || check.detail || "Issue detected"}
+              </p>
+            );
+          })()}
         </div>
-      )}
-      {validation && (
-        <>
-          {validation.checks.map((check) => (
-            <div
-              key={check.name}
-              className={cn(
-                "flex items-center gap-1 text-[11px] font-medium",
-                check.passed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
-              )}
-              title={check.detail}
-            >
-              {check.passed ? (
-                <Check className="w-3 h-3" />
-              ) : (
-                <AlertTriangle className="w-3 h-3" />
-              )}
-              <span>{check.name}</span>
-              {check.detail && check.name === "Size" && (
-                <span className="text-muted-foreground font-normal">({check.detail})</span>
-              )}
-            </div>
-          ))}
-        </>
       )}
     </div>
   );
@@ -112,6 +142,7 @@ function QualityIndicators({
 
 export function PreviewPanel({
   html,
+  mjml,
   isStreaming,
   isValidating,
   validation,
@@ -208,6 +239,7 @@ export function PreviewPanel({
     <div className="flex-1 flex flex-col overflow-hidden bg-surface">
       <PreviewToolbar
         html={html}
+        mjml={mjml}
         deviceMode={preview.deviceMode}
         darkMode={preview.darkMode}
         showBlockLabels={preview.showBlockLabels}

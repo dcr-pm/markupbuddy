@@ -18,6 +18,7 @@ import type { DeviceMode } from "@/hooks/use-preview";
 
 interface PreviewToolbarProps {
   html: string;
+  mjml?: string | null;
   deviceMode: DeviceMode;
   darkMode: boolean;
   showBlockLabels: boolean;
@@ -29,6 +30,7 @@ interface PreviewToolbarProps {
 
 export function PreviewToolbar({
   html,
+  mjml,
   deviceMode,
   darkMode,
   showBlockLabels,
@@ -38,6 +40,7 @@ export function PreviewToolbar({
   onSendTest,
 }: PreviewToolbarProps) {
   const [copied, setCopied] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   const handleCopy = useCallback(async () => {
     try {
@@ -58,7 +61,7 @@ export function PreviewToolbar({
     }
   }, [html]);
 
-  const handleDownload = useCallback(() => {
+  const handleDownloadHtml = useCallback(() => {
     const inlined = inlineStyles(html);
     const blob = new Blob([inlined], { type: "text/html" });
     const url = URL.createObjectURL(blob);
@@ -69,7 +72,22 @@ export function PreviewToolbar({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setShowDownloadMenu(false);
   }, [html]);
+
+  const handleDownloadMjml = useCallback(() => {
+    if (!mjml) return;
+    const blob = new Blob([mjml], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "email.mjml";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setShowDownloadMenu(false);
+  }, [mjml]);
 
   return (
     <div className="flex items-center justify-between px-3 py-2 bg-muted border-b border-border">
@@ -137,13 +155,36 @@ export function PreviewToolbar({
           )}
           {copied ? "Copied!" : "Copy HTML"}
         </button>
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background transition"
-        >
-          <Download className="w-3.5 h-3.5" />
-          Download
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background transition"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download
+          </button>
+          {showDownloadMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowDownloadMenu(false)} />
+              <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-border rounded-lg shadow-lg py-1 min-w-[140px]">
+                <button
+                  onClick={handleDownloadHtml}
+                  className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-muted transition"
+                >
+                  Download HTML
+                </button>
+                {mjml && (
+                  <button
+                    onClick={handleDownloadMjml}
+                    className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-muted transition"
+                  >
+                    Download MJML
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
         {onSendTest && (
           <button
             onClick={onSendTest}

@@ -26,6 +26,8 @@ interface UseChatOptions {
   onConversationCreated?: (id: string) => void;
 }
 
+export type StreamPhase = "thinking" | "writing" | "checking" | "fixing" | null;
+
 export function useChat({
   conversationId,
   brandContext,
@@ -34,9 +36,11 @@ export function useChat({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentHtml, setCurrentHtml] = useState<string | null>(null);
+  const [currentMjml, setCurrentMjml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [streamPhase, setStreamPhase] = useState<StreamPhase>(null);
   const [blockMap, setBlockMap] = useState<BlockMap>({});
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeConversationIdRef = useRef<string | null>(conversationId);
@@ -97,6 +101,7 @@ export function useChat({
     async (text: string, imageUrl?: string, scrapedHtml?: string) => {
       setError(null);
       setIsStreaming(true);
+      setStreamPhase("thinking");
       setValidation(null);
       setIsValidating(false);
 
@@ -177,6 +182,7 @@ export function useChat({
         let fullText = "";
         let lastCompiledMjml = "";
         let pendingCompile: Promise<void> | null = null;
+        let currentPhase: StreamPhase = "thinking";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -204,6 +210,12 @@ export function useChat({
               if (data.text) {
                 fullText += data.text;
 
+                // Track stream phase transitions
+                if (currentPhase === "thinking" && (/```mjml/i.test(fullText) || /```html/i.test(fullText))) {
+                  currentPhase = "writing";
+                  setStreamPhase("writing");
+                }
+
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMessage.id
@@ -219,6 +231,7 @@ export function useChat({
                   if (isMjmlContent && extracted.includes("</mjml>")) {
                     if (extracted !== lastCompiledMjml) {
                       lastCompiledMjml = extracted;
+                      setCurrentMjml(extracted);
                       // Extract block map and inject css-classes for preview labels
                       const map = extractBlockMap(extracted);
                       if (Object.keys(map).length > 0) setBlockMap(map);
@@ -251,12 +264,16 @@ export function useChat({
 
               // Handle validation results
               if (data.validation) {
+                currentPhase = "checking";
+                setStreamPhase("checking");
                 setIsValidating(true);
                 setValidation(data.validation as ValidationResult);
               }
 
               // Handle correction (server sends corrected compiled HTML)
               if (data.correction) {
+                currentPhase = "fixing";
+                setStreamPhase("fixing");
                 const correctedHtml = data.correction.html;
                 if (correctedHtml) {
                   setCurrentHtml(correctedHtml);
@@ -297,6 +314,7 @@ export function useChat({
       } finally {
         setIsStreaming(false);
         setIsValidating(false);
+        setStreamPhase(null);
         abortControllerRef.current = null;
       }
     },
@@ -311,7 +329,9 @@ export function useChat({
   return {
     messages,
     isStreaming,
+    streamPhase,
     currentHtml,
+    currentMjml,
     error,
     validation,
     isValidating,

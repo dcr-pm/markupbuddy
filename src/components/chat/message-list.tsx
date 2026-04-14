@@ -2,17 +2,20 @@
 
 import { useEffect, useRef } from "react";
 import type { Message } from "@/types/chat";
+import type { StreamPhase } from "@/hooks/use-chat";
 import { MessageBubble } from "./message-bubble";
 import { Mail, Megaphone, Tag, Newspaper, Blocks } from "lucide-react";
 
 interface MessageListProps {
   messages: Message[];
   isStreaming: boolean;
+  streamPhase?: StreamPhase;
   onImageSelected?: (prompt: string, url: string) => void;
   onSuggestionClick?: (text: string) => void;
+  onRetry?: () => void;
 }
 
-export function MessageList({ messages, isStreaming, onImageSelected, onSuggestionClick }: MessageListProps) {
+export function MessageList({ messages, isStreaming, streamPhase, onImageSelected, onSuggestionClick, onRetry }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,8 +66,23 @@ export function MessageList({ messages, isStreaming, onImageSelected, onSuggesti
               i === messages.length - 1 &&
               msg.role === "assistant"
             }
+            streamPhase={
+              isStreaming &&
+              i === messages.length - 1 &&
+              msg.role === "assistant"
+                ? streamPhase
+                : undefined
+            }
             onImageSelected={onImageSelected}
             onSendReply={onSuggestionClick}
+            onRetry={
+              !isStreaming &&
+              i === messages.length - 1 &&
+              msg.role === "assistant" &&
+              !msg.content?.trim()
+                ? onRetry
+                : undefined
+            }
           />
         ))}
         <div ref={bottomRef} />

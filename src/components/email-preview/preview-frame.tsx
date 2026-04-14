@@ -113,9 +113,20 @@ export function PreviewFrame({ html, width, darkMode, blockMap, showBlockLabels,
     try {
       const doc = iframe.contentDocument;
       if (doc) {
+        // Save scroll position of the parent scrollable container
+        const scrollParent = iframe.closest(".overflow-y-auto");
+        const savedScroll = scrollParent?.scrollTop ?? 0;
+
         doc.open();
         doc.write(wrappedHtml);
         doc.close();
+
+        // Restore scroll position after rewrite
+        if (scrollParent && savedScroll > 0) {
+          requestAnimationFrame(() => {
+            scrollParent.scrollTop = savedScroll;
+          });
+        }
 
         // Resize after initial render, after images load, and after fonts load
         resizeIframe();

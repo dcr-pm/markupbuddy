@@ -26,7 +26,9 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
   const {
     messages,
     isStreaming,
+    streamPhase,
     currentHtml,
+    currentMjml,
     error,
     validation,
     isValidating,
@@ -230,7 +232,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           )}
         >
           <div className="h-[50vh]">
-            <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
+            <PreviewPanel html={currentHtml} mjml={currentMjml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
           </div>
           <button
             onClick={() => setMobilePreviewOpen(false)}
@@ -244,10 +246,16 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
         <MessageList
           messages={messages}
           isStreaming={isStreaming}
+          streamPhase={streamPhase}
           onImageSelected={(prompt, url) => {
             sendMessage(`Use this image for "${prompt}": ${url}`);
           }}
           onSuggestionClick={(text) => sendMessage(text)}
+          onRetry={() => {
+            // Resend the last user message
+            const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
+            if (lastUserMsg) sendMessage(lastUserMsg.content);
+          }}
         />
 
         <ChatInput
@@ -260,7 +268,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Desktop preview panel */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
+        <PreviewPanel html={currentHtml} mjml={currentMjml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
       </div>
 
       {showSendDialog && currentHtml && conversationId && (
