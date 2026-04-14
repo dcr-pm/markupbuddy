@@ -15,6 +15,7 @@ interface SendEmailParams {
   html: string;
   fromName?: string;
   replyTo?: string;
+  senderDomain?: string;
 }
 
 export async function sendTestEmail({
@@ -23,12 +24,14 @@ export async function sendTestEmail({
   html,
   fromName,
   replyTo,
+  senderDomain,
 }: SendEmailParams): Promise<{ success: boolean; error?: string }> {
   const resend = getResendClient();
+  const domain = senderDomain || getDefaultDomain();
 
   try {
     const { error } = await resend.emails.send({
-      from: `${fromName || "MarkupBuddy"} <test@${getDomain()}>`,
+      from: `${fromName || "MarkupBuddy"} <test@${domain}>`,
       to,
       subject: subject || "Test Email from MarkupBuddy",
       html,
@@ -48,6 +51,6 @@ export async function sendTestEmail({
   }
 }
 
-function getDomain(): string {
+export function getDefaultDomain(): string {
   return process.env.RESEND_DOMAIN || "admin.markupbuddy.com";
 }

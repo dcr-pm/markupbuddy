@@ -16,6 +16,7 @@ import {
   Square,
   Pencil,
   Check,
+  Mail,
 } from "lucide-react";
 import { cn, truncate } from "@/lib/utils";
 import { useState, useRef } from "react";
@@ -256,6 +257,18 @@ export function ConversationSidebar({
         >
           <Palette className={cn("w-4 h-4", pathname.startsWith("/brands") && "text-purple-500")} />
           <span className="text-xs">Brands</span>
+        </Link>
+        <Link
+          href="/audiences"
+          className={cn(
+            "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
+            pathname.startsWith("/audiences")
+              ? "bg-background text-foreground shadow-sm border border-border"
+              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+          )}
+        >
+          <Mail className={cn("w-4 h-4", pathname.startsWith("/audiences") && "text-blue-500")} />
+          <span className="text-xs">Audiences</span>
         </Link>
         <Link
           href="/test-users"

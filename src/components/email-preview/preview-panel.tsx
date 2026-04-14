@@ -60,6 +60,7 @@ interface PreviewPanelProps {
   validation?: ValidationResult | null;
   blockMap?: BlockMap;
   onSendTest?: () => void;
+  onCreateCampaign?: () => void;
   onBlockAction?: (action: BlockAction) => void;
   onBlockRename?: (blockNumber: number, newName: string) => void;
   onElementReorder?: (html: string) => void;
@@ -148,6 +149,7 @@ export function PreviewPanel({
   validation,
   blockMap,
   onSendTest,
+  onCreateCampaign,
   onBlockAction,
   onBlockRename,
   onElementReorder,
@@ -247,6 +249,7 @@ export function PreviewPanel({
         onToggleDarkMode={preview.toggleDarkMode}
         onToggleBlockLabels={preview.toggleBlockLabels}
         onSendTest={onSendTest}
+        onCreateCampaign={onCreateCampaign}
       />
       <div className="flex-1 overflow-y-auto p-4">
         <PreviewFrame

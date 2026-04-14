@@ -10,6 +10,7 @@ import {
   Sun,
   Check,
   Layers,
+  Megaphone,
 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { inlineStyles } from "@/lib/email/inline";
@@ -26,6 +27,7 @@ interface PreviewToolbarProps {
   onToggleDarkMode: () => void;
   onToggleBlockLabels: () => void;
   onSendTest?: () => void;
+  onCreateCampaign?: () => void;
 }
 
 export function PreviewToolbar({
@@ -38,6 +40,7 @@ export function PreviewToolbar({
   onToggleDarkMode,
   onToggleBlockLabels,
   onSendTest,
+  onCreateCampaign,
 }: PreviewToolbarProps) {
   const [copied, setCopied] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -185,6 +188,15 @@ export function PreviewToolbar({
             </>
           )}
         </div>
+        {onCreateCampaign && (
+          <button
+            onClick={onCreateCampaign}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background transition"
+          >
+            <Megaphone className="w-3.5 h-3.5" />
+            Campaign
+          </button>
+        )}
         {onSendTest && (
           <button
             onClick={onSendTest}

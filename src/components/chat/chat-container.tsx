@@ -8,6 +8,7 @@ import { ChatInput } from "./chat-input";
 import { BrandPicker } from "@/components/brand/brand-picker";
 import { PreviewPanel } from "@/components/email-preview/preview-panel";
 import { SendDialog } from "@/components/test-send/send-dialog";
+import { CampaignDialog } from "@/components/campaign/campaign-dialog";
 import { deleteBlockFromHtml, swapBlocksInHtml, renameBlockInHtml } from "@/lib/mjml/block-labels";
 import type { BlockAction } from "@/components/email-preview/preview-frame";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
   const { brands, activeBrand, setActiveBrand, getBrandContext } = useBrands();
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const [showCampaignDialog, setShowCampaignDialog] = useState(false);
 
   const {
     messages,
@@ -232,7 +234,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           )}
         >
           <div className="h-[50vh]">
-            <PreviewPanel html={currentHtml} mjml={currentMjml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
+            <PreviewPanel html={currentHtml} mjml={currentMjml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onCreateCampaign={currentHtml && conversationId ? () => setShowCampaignDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
           </div>
           <button
             onClick={() => setMobilePreviewOpen(false)}
@@ -268,7 +270,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
 
       {/* Desktop preview panel */}
       <div className="hidden lg:flex lg:flex-1 flex-col">
-        <PreviewPanel html={currentHtml} mjml={currentMjml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
+        <PreviewPanel html={currentHtml} mjml={currentMjml} isStreaming={isStreaming} isValidating={isValidating} validation={validation} blockMap={blockMap} onSendTest={currentHtml ? () => setShowSendDialog(true) : undefined} onCreateCampaign={currentHtml && conversationId ? () => setShowCampaignDialog(true) : undefined} onBlockAction={handleBlockAction} onBlockRename={handleBlockRename} onElementReorder={handleElementReorder} onRefreshPreview={conversationId ? handleRefreshPreview : undefined} />
       </div>
 
       {showSendDialog && currentHtml && conversationId && (
@@ -276,6 +278,16 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
           html={currentHtml}
           conversationId={conversationId}
           onClose={() => setShowSendDialog(false)}
+        />
+      )}
+
+      {showCampaignDialog && currentHtml && conversationId && (
+        <CampaignDialog
+          html={currentHtml}
+          conversationId={conversationId}
+          brandId={activeBrand?.id}
+          onClose={() => setShowCampaignDialog(false)}
+          onCreated={(id) => toast.success(`Campaign created: ${id.slice(0, 8)}...`)}
         />
       )}
     </div>
