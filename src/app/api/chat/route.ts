@@ -16,6 +16,7 @@ import {
   shouldRetry,
   formatIssuesForLLM,
 } from "@/lib/email/validators";
+import { getGenerationUsage, isGuest, GUEST_LIMIT_MESSAGE } from "@/lib/guest";
 import type { ChatRequest, ValidationCheck } from "@/types/chat";
 
 // Netlify/Vercel: streaming AI responses need extended timeout
@@ -29,6 +30,7 @@ interface SaveContext {
   userId: string;
   message: string;
   historyLength: number;
+  isGuest: boolean;
 }
 
 /**
@@ -251,6 +253,16 @@ function createValidatedStream(
         console.error("[chat] Validation phase error:", validationErr instanceof Error ? validationErr.message : validationErr);
       }
 
+      // Count the generation against the guest's free-trial limit.
+      // Only responses that produce an email count, so clarifying
+      // questions don't use up the quota.
+      if (saveCtx.isGuest && htmlOutput) {
+        const { error: usageErr } = await supabase.rpc("record_generation");
+        if (usageErr) {
+          console.error("[chat] Failed to record generation:", usageErr.message);
+        }
+      }
+
       // Send final done event
       controller.enqueue(
         encoder.encode(
@@ -430,6 +442,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // Free-trial limit for guests
+    const guest = isGuest(user);
+    if (guest) {
+      const usage = await getGenerationUsage(supabase, user.id);
+      if (usage.remaining <= 0) {
+        return NextResponse.json(
+          { error: GUEST_LIMIT_MESSAGE, code: "generation_limit" },
+          { status: 403 }
+        );
+      }
+    }
+
     const body: ChatRequest = await request.json();
     const { conversationId, message, imageUrl, scrapedHtml, brandContext } =
       body;
@@ -536,6 +560,7 @@ export async function POST(request: Request) {
         userId: user.id,
         message,
         historyLength: history?.length || 0,
+        isGuest: guest,
       },
       supabase,
       lastFullMjml
