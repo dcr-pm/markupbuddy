@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateImages } from "@/lib/xai/image";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getGenerationUsage, isGuest, GUEST_LIMIT_MESSAGE } from "@/lib/guest";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -11,6 +12,13 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (isGuest(user) && (await getGenerationUsage(supabase, user.id)).remaining <= 0) {
+    return NextResponse.json(
+      { error: GUEST_LIMIT_MESSAGE, code: "generation_limit" },
+      { status: 403 }
+    );
   }
 
   const { allowed } = checkRateLimit(`img-${user.id}`);

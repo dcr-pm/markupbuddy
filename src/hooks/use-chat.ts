@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import type { Message, ChatRequest, BrandContext, ValidationResult } from "@/types/chat";
 import { extractHtmlFromResponse, generateId } from "@/lib/utils";
 import { extractBlockMap, injectBlockClasses, type BlockMap } from "@/lib/mjml/block-labels";
+import { USAGE_CHANGED_EVENT } from "@/lib/guest";
 
 async function compileMjmlContent(mjml: string): Promise<string | null> {
   try {
@@ -42,6 +43,7 @@ export function useChat({
   const [isValidating, setIsValidating] = useState(false);
   const [streamPhase, setStreamPhase] = useState<StreamPhase>(null);
   const [blockMap, setBlockMap] = useState<BlockMap>({});
+  const [limitReached, setLimitReached] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeConversationIdRef = useRef<string | null>(conversationId);
 
@@ -170,6 +172,14 @@ export function useChat({
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
+          if (errData.code === "generation_limit") {
+            // Shown as a card in the chat instead of an error toast
+            setLimitReached(true);
+            setMessages((prev) =>
+              prev.filter((m) => m.id !== assistantMessage.id)
+            );
+            return;
+          }
           throw new Error(
             errData.error || `Request failed with status ${res.status}`
           );
@@ -316,6 +326,7 @@ export function useChat({
         setIsValidating(false);
         setStreamPhase(null);
         abortControllerRef.current = null;
+        window.dispatchEvent(new Event(USAGE_CHANGED_EVENT));
       }
     },
     [brandContext, onConversationCreated]
@@ -336,6 +347,7 @@ export function useChat({
     validation,
     isValidating,
     blockMap,
+    limitReached,
     sendMessage,
     stopStreaming,
     loadMessages,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isGuest, GUEST_FEATURE_MESSAGE } from "@/lib/guest";
 import { sendTestEmail } from "@/lib/resend/client";
 import { renderForTestUser } from "@/lib/email/scripting";
 import { inlineStyles } from "@/lib/email/inline";
@@ -14,6 +15,10 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (isGuest(user)) {
+    return NextResponse.json({ error: GUEST_FEATURE_MESSAGE }, { status: 403 });
   }
 
   try {

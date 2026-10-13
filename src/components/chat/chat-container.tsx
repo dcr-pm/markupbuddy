@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState, startTransition, useRef } from "react
 import { useChat } from "@/hooks/use-chat";
 import { useBrands } from "@/hooks/use-brand";
 import { MessageList } from "./message-list";
+import { GuestLimitCard } from "@/components/guest/guest-limit-card";
 import { ChatInput } from "./chat-input";
 import { BrandPicker } from "@/components/brand/brand-picker";
 import { PreviewPanel } from "@/components/email-preview/preview-panel";
@@ -35,6 +36,7 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
     validation,
     isValidating,
     blockMap,
+    limitReached,
     sendMessage,
     stopStreaming,
     loadMessages,
@@ -259,6 +261,8 @@ export function ChatContainer({ conversationId }: ChatContainerProps) {
             if (lastUserMsg) sendMessage(lastUserMsg.content);
           }}
         />
+
+        {limitReached && <GuestLimitCard />}
 
         <ChatInput
           onSend={handleSend}

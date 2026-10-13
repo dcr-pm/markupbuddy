@@ -42,16 +42,10 @@ export default async function HomePage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/signup"
+                href="/chat"
                 className="gradient-bg px-8 py-3.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition shadow-lg shadow-primary/25"
               >
-                Start Building Free
-              </Link>
-              <Link
-                href="/login"
-                className="px-8 py-3.5 rounded-xl text-sm font-semibold border border-border text-foreground hover:bg-muted transition"
-              >
-                Sign In
+                Start Building — No Sign-up
               </Link>
             </div>
           </div>
@@ -202,12 +196,12 @@ export default async function HomePage() {
             Join marketers who are shipping beautiful, responsive emails in minutes instead of hours.
           </p>
           <Link
-            href="/signup"
+            href="/chat"
             className="inline-block gradient-bg px-10 py-4 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition shadow-lg shadow-primary/25"
           >
             Get Started Free
           </Link>
-          <p className="text-xs text-muted-foreground mt-4">No credit card required</p>
+          <p className="text-xs text-muted-foreground mt-4">No sign-up or credit card required</p>
         </div>
       </section>
 

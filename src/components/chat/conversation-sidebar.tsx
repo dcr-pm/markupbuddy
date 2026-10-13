@@ -22,14 +22,20 @@ import { cn, truncate } from "@/lib/utils";
 import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { GuestUsageCard } from "@/components/guest/guest-usage-card";
+import type { GenerationUsage } from "@/lib/guest";
 
 interface ConversationSidebarProps {
   userId: string;
   userEmail: string;
+  isGuest?: boolean;
+  generationUsage?: GenerationUsage | null;
 }
 
 export function ConversationSidebar({
   userEmail,
+  isGuest = false,
+  generationUsage = null,
 }: ConversationSidebarProps) {
   const { conversations, createConversation, renameConversation, deleteConversation, deleteMultipleConversations } =
     useConversations();
@@ -50,7 +56,7 @@ export function ConversationSidebar({
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
     router.refresh();
   };
 
@@ -233,6 +239,8 @@ export function ConversationSidebar({
         })}
       </nav>
 
+      {isGuest && generationUsage && <GuestUsageCard initialUsage={generationUsage} />}
+
       <div className="border-t border-border p-2 space-y-0.5">
         <Link
           href="/chat"
@@ -258,30 +266,34 @@ export function ConversationSidebar({
           <Palette className={cn("w-4 h-4", pathname.startsWith("/brands") && "text-purple-500")} />
           <span className="text-xs">Brands</span>
         </Link>
-        <Link
-          href="/audiences"
-          className={cn(
-            "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
-            pathname.startsWith("/audiences")
-              ? "bg-background text-foreground shadow-sm border border-border"
-              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
-          )}
-        >
-          <Mail className={cn("w-4 h-4", pathname.startsWith("/audiences") && "text-blue-500")} />
-          <span className="text-xs">Audiences</span>
-        </Link>
-        <Link
-          href="/test-users"
-          className={cn(
-            "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
-            pathname === "/test-users"
-              ? "bg-background text-foreground shadow-sm border border-border"
-              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
-          )}
-        >
-          <Users className={cn("w-4 h-4", pathname === "/test-users" && "text-teal-500")} />
-          <span className="text-xs">Test Users</span>
-        </Link>
+        {!isGuest && (
+          <>
+            <Link
+              href="/audiences"
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
+                pathname.startsWith("/audiences")
+                  ? "bg-background text-foreground shadow-sm border border-border"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+              )}
+            >
+              <Mail className={cn("w-4 h-4", pathname.startsWith("/audiences") && "text-blue-500")} />
+              <span className="text-xs">Audiences</span>
+            </Link>
+            <Link
+              href="/test-users"
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
+                pathname === "/test-users"
+                  ? "bg-background text-foreground shadow-sm border border-border"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+              )}
+            >
+              <Users className={cn("w-4 h-4", pathname === "/test-users" && "text-teal-500")} />
+              <span className="text-xs">Test Users</span>
+            </Link>
+          </>
+        )}
         <Link
           href="/settings"
           className={cn(
@@ -295,21 +307,23 @@ export function ConversationSidebar({
           <span className="text-xs">Settings</span>
         </Link>
 
-        <div className="flex items-center gap-2.5 px-3 py-2.5 mt-1">
-          <div className="w-7 h-7 rounded-full gradient-bg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
-            {userInitial}
+        {!isGuest && (
+          <div className="flex items-center gap-2.5 px-3 py-2.5 mt-1">
+            <div className="w-7 h-7 rounded-full gradient-bg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+              {userInitial}
+            </div>
+            <span className="text-xs text-muted-foreground truncate flex-1">
+              {userEmail}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition"
+              title="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <span className="text-xs text-muted-foreground truncate flex-1">
-            {userEmail}
-          </span>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition"
-            title="Sign out"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
